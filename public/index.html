@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMS Agentic Company</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="icon.png" alt="AMS Agentic Company Logo" class="logo">
+                </div>
+                <div class="header-text">
+                    <h1>AMS Agentic Company</h1>
+                    <p>Submit prompts and get AI-powered responses in real-time</p>
+                </div>
+            </div>
+            <button class="settings-button" onclick="openSettingsModal()">
+                <span class="material-icons">settings</span>
+            </button>
+        </div>
+
+        <div class="main-layout">
+            <!-- Sidebar with Modes -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h3>
+                        <span class="material-icons">psychology</span>
+                        AI Modes
+                    </h3>
+                </div>
+                <div class="modes-list" id="modesList">
+                    <!-- Modes will be populated here -->
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="content-area">
+                <!-- Conversation Window at Top -->
+                <div class="conversation-container">
+                    <div class="conversation-header">
+                        <h3>Conversation History</h3>
+                        <button class="copy-conversation-button" onclick="copyConversation()" title="Copy entire conversation">
+                            <span class="material-icons">content_copy</span>
+                            Copy Conversation
+                        </button>
+                    </div>
+                    <div class="conversation" id="conversation">
+                                            <div class="message assistant" id="initial-msg">
+                        <div class="message-bubble">
+                            <div class="message-header" id="initialAiHeader">
+                                <span>Silma AI</span>
+                                <span class="message-timestamp" id="initialTimestamp"></span>
+                            </div>
+                            <div class="message-content">Hello! I'm ready to help you with any questions or tasks. What would you like to know?</div>
+                            <div class="message-actions">
+                                <button class="message-actions-button" onclick="toggleMessageMenu('initial-msg')">
+                                    <span class="material-icons">more_vert</span>
+                                </button>
+                                                            <div class="message-actions-menu" id="menu-initial-msg">
+                                <div class="message-actions-menu-item" onclick="copyMessage('initial-msg')">
+                                    <span class="material-icons">content_copy</span>
+                                    Copy
+                                </div>
+                                <div class="message-actions-menu-item" onclick="continueMessage('initial-msg')">
+                                    <span class="material-icons">play_arrow</span>
+                                    Continue
+                                </div>
+                                <div class="message-actions-menu-item" onclick="regenerateMessage('initial-msg')">
+                                    <span class="material-icons">refresh</span>
+                                    Regenerate
+                                </div>
+                                <div class="message-actions-menu-item" onclick="deleteMessage('initial-msg')">
+                                    <span class="material-icons">delete</span>
+                                    Delete
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- Controls at Bottom -->
+                <div class="controls-container">
+                    <div class="status-chip connected" id="status">
+                        <span class="material-icons">check_circle</span>
+                        <span id="statusText">Connected - Ready to chat</span>
+                    </div>
+
+                    <!-- File Attachment Area -->
+                    <div class="file-attachment-area" id="fileAttachmentArea">
+                        <div class="attached-files" id="attachedFiles"></div>
+                        <div class="file-drop-zone" id="fileDropZone">
+                            <div class="file-drop-content">
+                                <span class="material-icons">attach_file</span>
+                                <span>Drop files here or click to select</span>
+                                <small>Supports: Images, Videos, PDFs, Audio, Documents</small>
+                            </div>
+                            <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.csv,.json">
+                        </div>
+                    </div>
+
+                    <div class="mdc-text-field mdc-text-field--textarea">
+                        <textarea 
+                            class="mdc-text-field__input"
+                            id="prompt" 
+                            placeholder=" "
+                            rows="3"
+                        ></textarea>
+                        <label class="mdc-text-field__label" for="prompt">
+                            Enter your prompt here...
+                        </label>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="mdc-button mdc-button--raised" id="sendBtn" onclick="sendPrompt()">
+                            <span class="material-icons">send</span>
+                            Send Prompt
+                        </button>
+                        <button class="mdc-button mdc-button--outlined" id="streamBtn" onclick="sendStreamPrompt()">
+                            <span class="material-icons">stream</span>
+                            Stream Response
+                        </button>
+                        <button class="clear-button mdc-button mdc-button--outlined" onclick="clearConversation()">
+                            <span class="material-icons">delete</span>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="modal-close" onclick="closeSettingsModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 24px;">
+                    <label for="aiName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        AI Name:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="aiName" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter the name for the AI..."
+                        value="Silma AI"
+                    >
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label for="systemMessage" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        System Message:
+                    </label>
+                    <textarea 
+                        id="systemMessage" 
+                        class="system-message-field"
+                        placeholder="Enter a system message to set the AI's behavior and personality..."
+                    ></textarea>
+                    <p style="font-size: 12px; color: #757575; margin-top: 8px;">
+                        The system message helps define how the AI should behave and respond to your prompts.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; color: #424242;">Generation Settings</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Temperature</span>
+                                <span class="slider-value" id="modalTempValue">0.7</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="modalTemperature" 
+                                min="0" 
+                                max="2" 
+                                step="0.1" 
+                                value="0.7"
+                                class="mdc-slider"
+                            >
+                            <div class="slider-hint">0.0 - 2.0 (creativity)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Max Tokens</span>
+                                <span class="slider-value" id="modalTokenValue">2048</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="modalMaxTokens" 
+                                min="100" 
+                                max="4096" 
+                                step="100" 
+                                value="2048"
+                                class="mdc-slider"
+                            >
+                            <div class="slider-hint">100 - 4096 tokens</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top P</span>
+                                <span class="slider-value" id="modalTopPValue">0.8</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="modalTopP" 
+                                min="0" 
+                                max="1" 
+                                step="0.1" 
+                                value="0.8"
+                                class="mdc-slider"
+                            >
+                            <div class="slider-hint">0.0 - 1.0 (nucleus sampling)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top K</span>
+                                <span class="slider-value" id="modalTopKValue">40</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="modalTopK" 
+                                min="1" 
+                                max="100" 
+                                step="1" 
+                                value="40"
+                                class="mdc-slider"
+                            >
+                            <div class="slider-hint">1 - 100 (top-k sampling)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mdc-button mdc-button--outlined" onclick="closeSettingsModal()">
+                    Cancel
+                </button>
+                <button class="mdc-button mdc-button--raised" onclick="saveSettings()">
+                    <span class="material-icons">save</span>
+                    Save Settings
+                </button>
+            </div>
+        </div>
+        </div>
+</body>
+</html>
