@@ -77,18 +77,6 @@ export class App {
   private setupRobotJs(): void {
     this.robotJs = new RobotJsPlugin();
     this.logger.info('RobotJS plugin initialized');
-    
-    // Set up mouse location tracking callback (no logging here)
-    this.robotJs.onMouseLocation((_event) => {
-      // Handle mouse location events without logging
-      // The RobotJS plugin already logs location changes
-    });
-    
-    // Start mouse tracking after a delay
-    setTimeout(() => {
-      this.robotJs.startMouseTracking();
-      this.logger.info('Started mouse location tracking');
-    }, 2000);
   }
 
 
@@ -195,15 +183,6 @@ export class App {
         break;
       case '/api/upload':
         this.handleFileUpload(req, res);
-        break;
-      case '/api/mouse/start':
-        this.handleMouseStart(req, res);
-        break;
-      case '/api/mouse/stop':
-        this.handleMouseStop(req, res);
-        break;
-      case '/api/mouse/status':
-        this.handleMouseStatus(req, res);
         break;
       default:
         // Try to serve static files from public directory
@@ -654,70 +633,5 @@ export class App {
 
   public getRobotJsPlugin(): RobotJsPlugin {
     return this.robotJs;
-  }
-
-  // Mouse tracking API handlers
-  private async handleMouseStart(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (req.method !== 'POST') {
-      res.writeHead(405, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Method not allowed' }));
-      return;
-    }
-
-    try {
-      this.robotJs.startMouseTracking();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        success: true, 
-        message: 'Mouse location tracking started'
-      }));
-    } catch (error) {
-      this.logger.error('Error starting mouse tracking', error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to start mouse tracking' }));
-    }
-  }
-
-  private async handleMouseStop(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (req.method !== 'POST') {
-      res.writeHead(405, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Method not allowed' }));
-      return;
-    }
-
-    try {
-      this.robotJs.stopMouseTracking();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        success: true, 
-        message: 'Mouse location tracking stopped'
-      }));
-    } catch (error) {
-      this.logger.error('Error stopping mouse tracking', error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to stop mouse tracking' }));
-    }
-  }
-
-  private async handleMouseStatus(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    if (req.method !== 'GET') {
-      res.writeHead(405, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Method not allowed' }));
-      return;
-    }
-
-    try {
-      const status = this.robotJs.getTrackingStatus();
-      
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status,
-        timestamp: new Date().toISOString()
-      }));
-    } catch (error) {
-      this.logger.error('Error getting mouse status', error);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to get mouse status' }));
-    }
   }
 }
