@@ -1,0 +1,81 @@
+{
+    "name": "Design",
+    "key": "design",
+    "description": "Creates intuitive, engaging user experiences that delight customers and drive business success",
+    "io": {
+        "from": [
+            "product",
+            "marketing",
+            "branding",
+            "customer-support",
+            "analytics",
+            "strategic-planning"
+        ],
+        "to": [
+            "strategic-planning",
+            "product",
+            "marketing",
+            "branding",
+            "quality-assurance",
+            "scrum"
+        ]
+    },
+    "roles": [
+        {
+            "key": "ux-designer",
+            "name": "UX Designer",
+            "description": "Designs intuitive and accessible user experiences that meet user needs and business objectives",
+            "responsibilities": [
+                "Conduct user research and usability testing",
+                "Create user personas, journey maps, and experience flows",
+                "Design intuitive and accessible user interfaces",
+                "Ensure consistent and cohesive user experiences"
+            ]
+        },
+        {
+            "key": "visual-designer",
+            "name": "Visual Designer",
+            "description": "Creates compelling visual designs and maintains design consistency across platforms",
+            "responsibilities": [
+                "Develop visual design systems and style guides",
+                "Create compelling visual assets and brand elements",
+                "Ensure design consistency across all platforms and channels",
+                "Maintain high standards for visual quality and aesthetics"
+            ]
+        },
+        {
+            "key": "design-strategist",
+            "name": "Design Strategist",
+            "description": "Aligns design decisions with business objectives and user needs",
+            "responsibilities": [
+                "Align design decisions with business objectives and user needs",
+                "Establish design principles and best practices",
+                "Collaborate with cross-functional teams on design solutions",
+                "Advocate for user-centered design approaches"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "design-strategy-development",
+            "plan": [
+                {
+                    "key": "design-strategist",
+                    "prompt": "Develop a comprehensive design strategy that aligns with business objectives and user needs."
+                },
+                {
+                    "key": "ux-designer",
+                    "prompt": "Create user experience designs and flows based on the design strategy."
+                },
+                {
+                    "key": "visual-designer",
+                    "prompt": "Develop visual designs and design systems that support the UX strategy."
+                },
+                {
+                    "key": "design-strategist",
+                    "prompt": "Finalize the integrated design strategy with design principles and implementation guidelines."
+                }
+            ]
+        }
+    ]
+}

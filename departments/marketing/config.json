@@ -1,0 +1,83 @@
+{
+    "name": "Marketing",
+    "key": "marketing",
+    "description": "Creates awareness, generates demand, and builds strong brand relationships with target audiences",
+    "io": {
+        "from": [
+            "analytics",
+            "product",
+            "sales",
+            "customer-support",
+            "branding",
+            "research",
+            "strategic-planning"
+        ],
+        "to": [
+            "strategic-planning",
+            "analytics",
+            "sales",
+            "product",
+            "design",
+            "branding",
+            "customer-support"
+        ]
+    },
+    "roles": [
+        {
+            "key": "marketing-manager",
+            "name": "Marketing Manager",
+            "description": "Develops and executes comprehensive marketing strategies to drive brand awareness and demand generation",
+            "responsibilities": [
+                "Develop marketing strategies and campaign plans",
+                "Create compelling marketing messages and value propositions",
+                "Manage marketing budgets and resource allocation",
+                "Coordinate cross-channel marketing initiatives"
+            ]
+        },
+        {
+            "key": "digital-marketing-specialist",
+            "name": "Digital Marketing Specialist",
+            "description": "Executes digital marketing campaigns across various online channels and platforms",
+            "responsibilities": [
+                "Manage social media campaigns and content strategy",
+                "Optimize digital advertising campaigns and performance",
+                "Implement email marketing and automation strategies",
+                "Analyze digital marketing metrics and optimize performance"
+            ]
+        },
+        {
+            "key": "content-marketing-specialist",
+            "name": "Content Marketing Specialist",
+            "description": "Creates engaging content that attracts, educates, and converts target audiences",
+            "responsibilities": [
+                "Develop content strategies and editorial calendars",
+                "Create compelling blog posts, whitepapers, and marketing materials",
+                "Optimize content for SEO and audience engagement",
+                "Measure content performance and engagement metrics"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "marketing-campaign-strategy",
+            "plan": [
+                {
+                    "key": "marketing-manager",
+                    "prompt": "Develop a comprehensive marketing strategy and campaign plan based on target audience and business objectives."
+                },
+                {
+                    "key": "content-marketing-specialist",
+                    "prompt": "Create compelling content and messaging that aligns with the marketing strategy."
+                },
+                {
+                    "key": "digital-marketing-specialist",
+                    "prompt": "Develop digital marketing tactics and channel strategies to execute the campaign."
+                },
+                {
+                    "key": "marketing-manager",
+                    "prompt": "Finalize the integrated marketing campaign with performance metrics and success criteria."
+                }
+            ]
+        }
+    ]
+}

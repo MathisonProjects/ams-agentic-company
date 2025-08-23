@@ -37,6 +37,8 @@
     "@types/multer": "^2.0.0",
     "dotenv": "^16.3.0",
     "multer": "^2.0.2",
+    "node-global-key-listener": "^0.3.0",
+    "robotjs": "^0.6.0",
     "uuid": "^9.0.0",
     "ws": "^8.14.0"
   }

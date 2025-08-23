@@ -36,6 +36,20 @@
                         AI Modes
                     </h3>
                 </div>
+                <div class="modes-search">
+                    <div class="search-container">
+                        <span class="material-icons search-icon">search</span>
+                        <input 
+                            type="text" 
+                            id="modesSearch" 
+                            placeholder="Search AI modes..." 
+                            class="modes-search-input"
+                        >
+                        <button class="search-clear" id="searchClear" onclick="clearModesSearch()" style="display: none;">
+                            <span class="material-icons">close</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="modes-list" id="modesList">
                     <!-- Modes will be populated here -->
                 </div>
@@ -47,10 +61,16 @@
                 <div class="conversation-container">
                     <div class="conversation-header">
                         <h3>Conversation History</h3>
-                        <button class="copy-conversation-button" onclick="copyConversation()" title="Copy entire conversation">
-                            <span class="material-icons">content_copy</span>
-                            Copy Conversation
-                        </button>
+                        <div class="conversation-actions">
+                            <button class="copy-conversation-button" onclick="copyConversation()" title="Copy entire conversation">
+                                <span class="material-icons">content_copy</span>
+                                Copy Conversation
+                            </button>
+                            <button class="copy-last-response-button" onclick="copyLastResponse()" title="Copy last AI response">
+                                <span class="material-icons">content_copy</span>
+                                Copy Last Response
+                            </button>
+                        </div>
                     </div>
                     <div class="conversation" id="conversation">
                                             <div class="message assistant" id="initial-msg">

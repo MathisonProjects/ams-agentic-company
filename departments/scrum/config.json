@@ -1,0 +1,80 @@
+{
+    "name": "Scrum",
+    "key": "scrum",
+    "description": "Implements and maintains agile development methodologies for efficient, collaborative project delivery",
+    "io": {
+        "from": [
+            "product",
+            "design",
+            "engineering",
+            "quality-assurance",
+            "analytics"
+        ],
+        "to": [
+            "strategic-planning",
+            "product",
+            "design",
+            "engineering",
+            "quality-assurance",
+            "human-resources"
+        ]
+    },
+    "roles": [
+        {
+            "key": "scrum-master",
+            "name": "Scrum Master",
+            "description": "Facilitates Scrum ceremonies and ensures adherence to agile principles and practices",
+            "responsibilities": [
+                "Facilitate Scrum ceremonies (Sprint Planning, Daily Standups, Sprint Reviews, Retrospectives)",
+                "Maintain and optimize agile workflows and processes",
+                "Ensure adherence to Scrum principles and best practices",
+                "Coordinate cross-functional team collaboration"
+            ]
+        },
+        {
+            "key": "agile-coach",
+            "name": "Agile Coach",
+            "description": "Coaches teams on agile methodologies and promotes continuous improvement",
+            "responsibilities": [
+                "Coach teams on agile methodologies and practices",
+                "Promote self-organization and cross-functional collaboration",
+                "Facilitate conflict resolution and team dynamics",
+                "Support team growth and skill development"
+            ]
+        },
+        {
+            "key": "project-coordinator",
+            "name": "Project Coordinator",
+            "description": "Manages sprint planning and tracks progress to ensure timely delivery",
+            "responsibilities": [
+                "Manage sprint planning and backlog prioritization",
+                "Track progress and remove impediments to team productivity",
+                "Ensure timely delivery of sprint commitments",
+                "Facilitate continuous improvement and team velocity optimization"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "agile-implementation-strategy",
+            "plan": [
+                {
+                    "key": "scrum-master",
+                    "prompt": "Develop a comprehensive agile implementation strategy to improve team productivity and project delivery."
+                },
+                {
+                    "key": "agile-coach",
+                    "prompt": "Design team coaching and development programs based on the agile strategy."
+                },
+                {
+                    "key": "project-coordinator",
+                    "prompt": "Create project management processes and tools to support the agile implementation."
+                },
+                {
+                    "key": "scrum-master",
+                    "prompt": "Finalize the integrated agile strategy with success metrics and continuous improvement framework."
+                }
+            ]
+        }
+    ]
+}

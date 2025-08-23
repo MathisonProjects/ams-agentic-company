@@ -1,0 +1,87 @@
+{
+    "name": "Strategic Planning",
+    "key": "strategic-planning",
+    "description": "Develops and executes long-term organizational strategies, serves as strategic compass for all business activities",
+    "io": {
+        "from": [
+            "analytics",
+            "research",
+            "finance",
+            "marketing",
+            "sales",
+            "product",
+            "customer-support",
+            "human-resources"
+        ],
+        "to": [
+            "analytics",
+            "finance",
+            "marketing",
+            "sales",
+            "product",
+            "design",
+            "branding",
+            "human-resources",
+            "quality-assurance",
+            "scrum"
+        ]
+    },
+    "roles": [
+        {
+            "key": "strategic-planner",
+            "name": "Strategic Planner",
+            "description": "Develops and implements long-term organizational strategies, ensuring alignment with company vision and goals",
+            "responsibilities": [
+                "Conduct market research and analysis to inform strategic decisions",
+                "Create and maintain strategic roadmaps and action plans",
+                "Monitor and evaluate strategic initiatives to ensure alignment with business objectives",
+                "Provide strategic guidance to cross-functional teams"
+            ]
+        },
+        {
+            "key": "strategic-analyst",
+            "name": "Strategic Analyst",
+            "description": "Analyzes market trends, competitive landscapes, and industry dynamics to inform strategic decisions",
+            "responsibilities": [
+                "Conduct market research and analysis to inform strategic decisions",
+                "Create and maintain strategic roadmaps and action plans",
+                "Monitor and evaluate strategic initiatives to ensure alignment with business objectives",
+                "Provide strategic guidance to cross-functional teams"
+            ]
+        },
+        {
+            "key": "strategic-advisor",
+            "name": "Strategic Advisor",
+            "description": "Provides strategic guidance and expertise to cross-functional teams",
+            "responsibilities": [
+                "Conduct market research and analysis to inform strategic decisions",
+                "Create and maintain strategic roadmaps and action plans",
+                "Monitor and evaluate strategic initiatives to ensure alignment with business objectives",
+                "Provide strategic guidance to cross-functional teams"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "create-strategic-plan",
+            "plan": [
+                {
+                    "key": "strategic-planning",
+                    "prompt": "Develop a strategic plan for the company."
+                },
+                {
+                    "key": "strategic-analysis",
+                    "prompt": "Analyze the strategic-planning's output and provide feedback and suggestions for improvement."
+                },
+                {
+                    "key": "strategic-advisory",
+                    "prompt": "Provide strategic guidance and expertise from the strategic-analyst's output."
+                },
+                {
+                    "key": "strategic-planning",
+                    "prompt": "Update the strategic-planning's output based on the strategic-analysis's output and the strategic-advisory's output."
+                }
+            ]
+        }
+    ]
+}

@@ -10,6 +10,7 @@ let topP = 0.8;
 let topK = 40;
 let currentMode = null;
 let modes = [];
+let filteredModes = [];
 let conversationHistory = [
     {
         role: 'assistant',
@@ -670,6 +671,102 @@ function copyConversation() {
     });
 }
 
+function copyLastResponse() {
+    const conversationDiv = document.getElementById('conversation');
+    const messages = conversationDiv.querySelectorAll('.message');
+    
+    // Find the last assistant message
+    let lastResponse = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (!message.classList.contains('user')) {
+            const content = message.querySelector('.message-content');
+            if (content) {
+                lastResponse = content.textContent || content.innerText;
+                break;
+            }
+        }
+    }
+    
+    if (!lastResponse) {
+        updateStatus('disconnected', 'No AI response found to copy');
+        return;
+    }
+    
+    navigator.clipboard.writeText(lastResponse).then(() => {
+        updateStatus('connected', 'Last AI response copied to clipboard');
+    }).catch(err => {
+        console.error('Failed to copy last response: ', err);
+        updateStatus('disconnected', 'Failed to copy last response');
+    });
+}
+
+function searchModes(query) {
+    const searchQuery = query.toLowerCase().trim();
+    
+    if (searchQuery === '') {
+        filteredModes = [...modes];
+    } else {
+        filteredModes = modes.filter(mode => 
+            mode.name.toLowerCase().includes(searchQuery) ||
+            mode.aiName.toLowerCase().includes(searchQuery) ||
+            mode.systemPrompt.toLowerCase().includes(searchQuery)
+        );
+    }
+    
+    renderModesList();
+    
+    // Show/hide clear button
+    const clearButton = document.getElementById('searchClear');
+    if (clearButton) {
+        clearButton.style.display = searchQuery === '' ? 'none' : 'flex';
+    }
+}
+
+function clearModesSearch() {
+    const searchInput = document.getElementById('modesSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        searchModes('');
+    }
+}
+
+function renderModesList() {
+    const modesList = document.getElementById('modesList');
+    if (!modesList) return;
+    
+    modesList.innerHTML = '';
+    
+    if (filteredModes.length === 0) {
+        modesList.innerHTML = `
+            <div class="no-results">
+                <span class="material-icons">search_off</span>
+                <p>No modes found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    filteredModes.forEach((mode, index) => {
+        const modeItem = document.createElement('div');
+        modeItem.className = 'mode-item';
+        modeItem.onclick = () => selectMode(mode);
+        
+        const icon = mode.icon || 'psychology'; // Default icon if none specified
+        modeItem.innerHTML = `
+            <div class="mode-header">
+                <span class="material-icons mode-icon">${icon}</span>
+                <div class="mode-info">
+                    <div class="mode-name">${mode.name}</div>
+                    <div class="mode-ai-name">${mode.aiName}</div>
+                </div>
+            </div>
+        `;
+        
+        modesList.appendChild(modeItem);
+    });
+}
+
 // Modal Management
 function openSettingsModal() {
     const modal = document.getElementById('settingsModal');
@@ -736,36 +833,17 @@ async function loadModes() {
         const response = await fetch('/config.json');
         const config = await response.json();
         modes = config.modes;
+        filteredModes = [...modes]; // Initialize filtered modes with all modes
         
-        // Populate modes list
-        const modesList = document.getElementById('modesList');
-        modesList.innerHTML = '';
-        
-        modes.forEach((mode, index) => {
-            const modeItem = document.createElement('div');
-            modeItem.className = 'mode-item';
-            modeItem.onclick = () => selectMode(index);
-            
-            const icon = mode.icon || 'psychology'; // Default icon if none specified
-            modeItem.innerHTML = `
-                <div class="mode-header">
-                    <span class="material-icons mode-icon">${icon}</span>
-                    <div class="mode-info">
-                        <div class="mode-name">${mode.name}</div>
-                        <div class="mode-ai-name">${mode.aiName}</div>
-                    </div>
-                </div>
-            `;
-            
-            modesList.appendChild(modeItem);
-        });
+        // Render the modes list
+        renderModesList();
         
         // Select default mode
-        const defaultModeIndex = modes.findIndex(mode => mode.default);
-        if (defaultModeIndex !== -1) {
-            selectMode(defaultModeIndex);
+        const defaultMode = modes.find(mode => mode.default);
+        if (defaultMode) {
+            selectMode(defaultMode);
         } else if (modes.length > 0) {
-            selectMode(0);
+            selectMode(modes[0]);
         }
         
     } catch (error) {
@@ -774,16 +852,23 @@ async function loadModes() {
     }
 }
 
-function selectMode(index) {
-    if (index < 0 || index >= modes.length) return;
+function selectMode(mode) {
+    if (!mode) return;
     
-    const mode = modes[index];
     currentMode = mode;
     
-    // Update UI
+    // Clear search when a mode is selected
+    clearModesSearch();
+    
+    // Update UI - highlight the selected mode
     const modeItems = document.querySelectorAll('.mode-item');
-    modeItems.forEach((item, i) => {
-        item.classList.toggle('active', i === index);
+    modeItems.forEach((item) => {
+        item.classList.remove('active');
+        // Check if this item corresponds to the selected mode
+        const modeName = item.querySelector('.mode-name')?.textContent;
+        if (modeName === mode.name) {
+            item.classList.add('active');
+        }
     });
     
     // Apply mode settings
@@ -984,6 +1069,14 @@ function setupEventListeners() {
             sendPrompt();
         }
     });
+
+    // Handle modes search input
+    const modesSearchInput = document.getElementById('modesSearch');
+    if (modesSearchInput) {
+        modesSearchInput.addEventListener('input', function(e) {
+            searchModes(e.target.value);
+        });
+    }
 
     // Close modal when clicking outside
     document.getElementById('settingsModal').addEventListener('click', function(e) {

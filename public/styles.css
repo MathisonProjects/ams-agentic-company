@@ -58,6 +58,91 @@ body {
     gap: 8px;
 }
 
+.modes-search {
+    margin-bottom: 16px;
+}
+
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #EEE9DB;
+    border: 1px solid #0D3F44;
+    border-radius: 20px;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+}
+
+.search-container:focus-within {
+    border-color: #0D3F44;
+    box-shadow: 0 2px 4px rgba(13, 63, 68, 0.2);
+}
+
+.search-icon {
+    color: #0D3F44;
+    font-size: 18px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.modes-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: #0D3F44;
+    font-size: 0.875rem;
+    outline: none;
+    padding: 0;
+}
+
+.modes-search-input::placeholder {
+    color: #0D3F44;
+    opacity: 0.6;
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    color: #0D3F44;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-clear:hover {
+    background: rgba(13, 63, 68, 0.1);
+}
+
+.search-clear .material-icons {
+    font-size: 16px;
+}
+
+.no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: #0D3F44;
+    opacity: 0.6;
+    text-align: center;
+}
+
+.no-results .material-icons {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.no-results p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
 .modes-list {
     flex: 1;
     overflow-y: auto;
@@ -270,6 +355,40 @@ body {
 }
 
 .copy-conversation-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(13, 63, 68, 0.2);
+}
+
+.conversation-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.copy-last-response-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #EFE9DB;
+    color: #0D3F44;
+    border: 2px solid #0D3F44;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(13, 63, 68, 0.1);
+}
+
+.copy-last-response-button:hover {
+    background: #0D3F44;
+    color: white;
+    box-shadow: 0 4px 8px rgba(13, 63, 68, 0.3);
+    transform: translateY(-1px);
+}
+
+.copy-last-response-button:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(13, 63, 68, 0.2);
 }

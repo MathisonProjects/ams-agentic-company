@@ -1,0 +1,80 @@
+{
+    "name": "Branding",
+    "key": "branding",
+    "description": "Develops and maintains strong brand identity that resonates with target audiences and differentiates the organization",
+    "io": {
+        "from": [
+            "marketing",
+            "design",
+            "analytics",
+            "customer-support",
+            "strategic-planning",
+            "research"
+        ],
+        "to": [
+            "strategic-planning",
+            "marketing",
+            "design",
+            "sales",
+            "customer-support"
+        ]
+    },
+    "roles": [
+        {
+            "key": "brand-manager",
+            "name": "Brand Manager",
+            "description": "Develops and maintains brand strategy, positioning, and identity across all touchpoints",
+            "responsibilities": [
+                "Develop comprehensive brand strategy and positioning",
+                "Create and maintain brand guidelines and visual identity",
+                "Define brand voice, personality, and messaging framework",
+                "Ensure brand consistency across all channels and touchpoints"
+            ]
+        },
+        {
+            "key": "brand-experience-specialist",
+            "name": "Brand Experience Specialist",
+            "description": "Designs cohesive brand experiences and builds emotional connections with customers",
+            "responsibilities": [
+                "Design cohesive brand experiences across all customer interactions",
+                "Develop brand storytelling and narrative frameworks",
+                "Create emotional connections and brand loyalty",
+                "Monitor and enhance brand perception and reputation"
+            ]
+        },
+        {
+            "key": "brand-communications-specialist",
+            "name": "Brand Communications Specialist",
+            "description": "Manages brand communications and ensures consistent messaging across all channels",
+            "responsibilities": [
+                "Develop brand communication strategies and messaging",
+                "Create compelling brand content and storytelling",
+                "Ensure consistent brand voice and messaging across channels",
+                "Monitor brand communications and adjust strategies as needed"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "brand-strategy-development",
+            "plan": [
+                {
+                    "key": "brand-manager",
+                    "prompt": "Develop a comprehensive brand strategy and positioning framework for the organization."
+                },
+                {
+                    "key": "brand-experience-specialist",
+                    "prompt": "Design brand experiences and customer touchpoints that align with the brand strategy."
+                },
+                {
+                    "key": "brand-communications-specialist",
+                    "prompt": "Create brand communication strategies and messaging that support the brand experience."
+                },
+                {
+                    "key": "brand-manager",
+                    "prompt": "Finalize the integrated brand strategy with brand guidelines and implementation framework."
+                }
+            ]
+        }
+    ]
+}

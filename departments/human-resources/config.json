@@ -1,0 +1,79 @@
+{
+    "name": "Human Resources",
+    "key": "human-resources",
+    "description": "Attracts, develops, and retains top talent while fostering a positive, inclusive workplace culture",
+    "io": {
+        "from": [
+            "analytics",
+            "finance",
+            "strategic-planning",
+            "quality-assurance",
+            "scrum"
+        ],
+        "to": [
+            "strategic-planning",
+            "analytics",
+            "finance",
+            "quality-assurance",
+            "scrum"
+        ]
+    },
+    "roles": [
+        {
+            "key": "hr-manager",
+            "name": "HR Manager",
+            "description": "Leads HR operations and develops strategies to support organizational growth and employee satisfaction",
+            "responsibilities": [
+                "Develop and implement HR strategies and policies",
+                "Manage talent acquisition and recruitment processes",
+                "Foster positive workplace culture and employee engagement",
+                "Ensure compliance with employment laws and regulations"
+            ]
+        },
+        {
+            "key": "talent-acquisition-specialist",
+            "name": "Talent Acquisition Specialist",
+            "description": "Attracts and recruits top talent aligned with organizational needs and culture",
+            "responsibilities": [
+                "Develop recruitment strategies and sourcing plans",
+                "Screen and interview candidates for various positions",
+                "Build relationships with potential candidates and recruitment partners",
+                "Manage the candidate experience and onboarding process"
+            ]
+        },
+        {
+            "key": "employee-development-specialist",
+            "name": "Employee Development Specialist",
+            "description": "Develops and implements employee training and development programs",
+            "responsibilities": [
+                "Design and deliver employee training and development programs",
+                "Manage performance evaluation and career development processes",
+                "Create succession planning and leadership development initiatives",
+                "Support employee growth and skill development"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "talent-management-strategy",
+            "plan": [
+                {
+                    "key": "hr-manager",
+                    "prompt": "Develop a comprehensive talent management strategy to attract, develop, and retain top talent."
+                },
+                {
+                    "key": "talent-acquisition-specialist",
+                    "prompt": "Create recruitment and sourcing strategies to attract the right talent for the organization."
+                },
+                {
+                    "key": "employee-development-specialist",
+                    "prompt": "Design employee development and training programs to support talent growth and retention."
+                },
+                {
+                    "key": "hr-manager",
+                    "prompt": "Finalize the integrated talent management strategy with performance metrics and success criteria."
+                }
+            ]
+        }
+    ]
+}

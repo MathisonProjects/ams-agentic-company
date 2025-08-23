@@ -1,0 +1,80 @@
+{
+    "name": "Research",
+    "key": "research",
+    "description": "Conducts comprehensive market research, competitive analysis, and data-driven insights to inform strategic decision-making",
+    "io": {
+        "from": [
+            "analytics",
+            "marketing",
+            "sales",
+            "customer-support",
+            "product"
+        ],
+        "to": [
+            "strategic-planning",
+            "analytics",
+            "marketing",
+            "sales",
+            "product",
+            "branding"
+        ]
+    },
+    "roles": [
+        {
+            "key": "research-manager",
+            "name": "Research Manager",
+            "description": "Leads research initiatives and develops comprehensive research strategies to support business decisions",
+            "responsibilities": [
+                "Develop comprehensive research strategies and methodologies",
+                "Conduct primary and secondary research on market trends",
+                "Monitor and analyze competitor activities and strategies",
+                "Create comprehensive research reports and presentations"
+            ]
+        },
+        {
+            "key": "market-researcher",
+            "name": "Market Researcher",
+            "description": "Conducts market research and analyzes customer behavior to identify opportunities",
+            "responsibilities": [
+                "Conduct market research and customer behavior analysis",
+                "Identify emerging trends and predict future market developments",
+                "Deep dive into customer needs, preferences, and pain points",
+                "Analyze market opportunities and competitive positioning"
+            ]
+        },
+        {
+            "key": "competitive-intelligence-analyst",
+            "name": "Competitive Intelligence Analyst",
+            "description": "Monitors and analyzes competitor activities to inform strategic decisions",
+            "responsibilities": [
+                "Monitor and analyze competitor activities and strategies",
+                "Conduct competitive analysis and benchmarking studies",
+                "Evaluate new technologies and their potential business impact",
+                "Provide competitive intelligence insights to support strategic planning"
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "key": "research-strategy-development",
+            "plan": [
+                {
+                    "key": "research-manager",
+                    "prompt": "Develop a comprehensive research strategy to support business decision-making and strategic planning."
+                },
+                {
+                    "key": "market-researcher",
+                    "prompt": "Conduct market research and customer analysis based on the research strategy."
+                },
+                {
+                    "key": "competitive-intelligence-analyst",
+                    "prompt": "Analyze competitive landscape and provide intelligence insights to support the research strategy."
+                },
+                {
+                    "key": "research-manager",
+                    "prompt": "Synthesize research findings into actionable insights and strategic recommendations."
+                }
+            ]
+        }
+    ]
+}
