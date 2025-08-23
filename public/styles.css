@@ -393,6 +393,34 @@ body {
     box-shadow: 0 2px 4px rgba(13, 63, 68, 0.2);
 }
 
+.create-sequence-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #EFE9DB;
+    color: #0D3F44;
+    border: 2px solid #0D3F44;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(13, 63, 68, 0.1);
+}
+
+.create-sequence-button:hover {
+    background: #0D3F44;
+    color: white;
+    box-shadow: 0 4px 8px rgba(13, 63, 68, 0.3);
+    transform: translateY(-1px);
+}
+
+.create-sequence-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(13, 63, 68, 0.2);
+}
+
 .conversation {
     flex: 1;
     overflow-y: auto;

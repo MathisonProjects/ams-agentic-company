@@ -701,6 +701,15 @@ function copyLastResponse() {
     });
 }
 
+function createSequence() {
+    console.log('Create Sequence button clicked!');
+    console.log('Current conversation history:', conversationHistory);
+    console.log('Current mode:', currentMode);
+    
+    // TODO: Implement sequence creation functionality
+    updateStatus('connected', 'Create Sequence clicked - check console for details');
+}
+
 function searchModes(query) {
     const searchQuery = query.toLowerCase().trim();
     
