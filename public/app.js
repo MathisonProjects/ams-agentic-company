@@ -913,7 +913,10 @@ async function saveSequence() {
         if (saveResult.success) {
             closeSequenceModal();
             updateStatus('connected', 'Sequence saved successfully');
-            
+
+            // Reload the strategies list to show the new sequence
+            await loadStrategies();
+
             setTimeout(() => {
                 updateStatus('connected', 'Connected - Ready to chat');
             }, 2000);
