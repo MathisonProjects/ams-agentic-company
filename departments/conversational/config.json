@@ -1,0 +1,139 @@
+{
+    "name": "Conversational",
+    "key": "conversational",
+    "description": "Designs, develops, and optimizes conversational experiences that engage users naturally and effectively",
+    "strategies": [
+        {
+            "key": "test-simple-plan",
+            "plan": [
+                [
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429126,
+                        "data": {
+                            "key": "H",
+                            "modifiers": ["DOWN"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429226,
+                        "data": {
+                            "key": "H",
+                            "modifiers": ["UP"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429326,
+                        "data": {
+                            "key": "I",
+                            "modifiers": ["DOWN"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429426,
+                        "data": {
+                            "key": "I",
+                            "modifiers": ["UP"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429526,
+                        "data": {
+                            "key": "ENTER",
+                            "modifiers": ["DOWN"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971429626,
+                        "data": {
+                            "key": "ENTER",
+                            "modifiers": ["UP"]
+                        }
+                    }
+                ]
+            ]
+        },
+        {
+            "key": "test-shift-plan",
+            "plan": [
+                [
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430126,
+                        "data": {
+                            "key": "SHIFT",
+                            "modifiers": ["DOWN"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430226,
+                        "data": {
+                            "key": "H",
+                            "modifiers": ["DOWN", "SHIFT"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430326,
+                        "data": {
+                            "key": "H",
+                            "modifiers": ["UP"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430426,
+                        "data": {
+                            "key": "SHIFT",
+                            "modifiers": ["UP"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430526,
+                        "data": {
+                            "key": "SHIFT",
+                            "modifiers": ["DOWN"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430626,
+                        "data": {
+                            "key": "FORWARD SLASH",
+                            "modifiers": ["DOWN", "SHIFT"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430726,
+                        "data": {
+                            "key": "FORWARD SLASH",
+                            "modifiers": ["UP"]
+                        }
+                    },
+                    {
+                        "type": "keyPress",
+                        "timestamp": 1755971430826,
+                        "data": {
+                            "key": "SHIFT",
+                            "modifiers": ["UP"]
+                        }
+                    }
+                ]
+            ]
+        },
+        {
+            "key": "conversational-experience-strategy",
+            "plan": [
+                
+            ]
+        }
+    ]
+}

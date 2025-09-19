@@ -8,6 +8,24 @@ export interface Config {
   wsPort: number;
   nodeEnv: string;
   host: string;
+  database: {
+    host: string;
+    port: number;
+    name: string;
+    user: string;
+    password: string;
+  };
+  redis: {
+    host: string;
+    port: number;
+  };
+  elasticsearch: {
+    host: string;
+    port: number;
+  };
+  kafka: {
+    brokers: string[];
+  };
   gemini: {
     apiKey: string;
     apiUrl: string;
@@ -20,6 +38,24 @@ export const config: Config = {
   wsPort: parseInt(process.env['WS_PORT'] || '8081', 10),
   nodeEnv: process.env['NODE_ENV'] || 'development',
   host: process.env['HOST'] || 'localhost',
+  database: {
+    host: process.env['DB_HOST'] || 'localhost',
+    port: parseInt(process.env['DB_PORT'] || '5432', 10),
+    name: process.env['DB_NAME'] || 'ams_agentic_company',
+    user: process.env['DB_USER'] || 'postgres',
+    password: process.env['DB_PASSWORD'] || 'postgres',
+  },
+  redis: {
+    host: process.env['REDIS_HOST'] || 'localhost',
+    port: parseInt(process.env['REDIS_PORT'] || '6379', 10),
+  },
+  elasticsearch: {
+    host: process.env['ELASTICSEARCH_HOST'] || 'localhost',
+    port: parseInt(process.env['ELASTICSEARCH_PORT'] || '9200', 10),
+  },
+  kafka: {
+    brokers: (process.env['KAFKA_BROKERS'] || 'localhost:9092').split(','),
+  },
   gemini: {
     apiKey: process.env['GEMINI_API_KEY'] || '',
     apiUrl: process.env['GEMINI_API_URL'] || 'https://generativelanguage.googleapis.com/v1beta/models',

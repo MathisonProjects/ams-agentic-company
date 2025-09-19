@@ -80,10 +80,10 @@ export class GeminiAiPlugin {
     }
     this.genAI = new GoogleGenerativeAI(currentKey);
     this.model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-pro'
+      model: 'gemini-2.0-flash'
     });
     
-    this.logger.info(`Using API key ${this.currentKeyIndex + 1}/${this.apiKeys.length} with model: gemini-2.5-pro`);
+    this.logger.info(`Using API key ${this.currentKeyIndex + 1}/${this.apiKeys.length} with model: gemini-2.0-flash`);
   }
 
   private rotateApiKey(): boolean {

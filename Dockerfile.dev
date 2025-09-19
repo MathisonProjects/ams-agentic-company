@@ -1,19 +1,31 @@
 FROM node:18-alpine
 
+# Install necessary packages for development and build tools
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    libc6-compat \
+    && ln -sf python3 /usr/bin/python
+
 # Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including dev dependencies)
-RUN npm install
+# Install dependencies excluding problematic ones for Docker
+RUN npm install --ignore-scripts
 
 # Copy source code
 COPY . .
 
+# Create .env file if it doesn't exist
+RUN touch .env
+
 # Expose ports
 EXPOSE 8080 8081
 
-# Start development server
+# Start development server with hot reload
 CMD ["npm", "run", "dev"]

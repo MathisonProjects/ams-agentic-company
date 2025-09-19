@@ -6,18 +6,34 @@ import { config } from './config';
 import { Logger } from './utils/logger';
 import GeminiAiPlugin from './plugins/gemini.ai';
 import RobotJsPlugin from './plugins/robotjs';
+import TrackerPlugin from './plugins/tracker';
+import PlanExecutor from './plugins/plan-executor';
+import PostgresPlugin from './plugins/postgres';
+import AppApiPlugin from './plugins/app-api';
 
 export class App {
   private httpServer: any;
   private wsServer!: WebSocketServer;
   private gemini!: GeminiAiPlugin;
   private robotJs!: RobotJsPlugin;
+  private tracker!: TrackerPlugin;
+  private planExecutor!: PlanExecutor;
+  private postgres!: PostgresPlugin;
+  private appApi!: AppApiPlugin;
   private logger: Logger;
 
   constructor() {
     this.logger = new Logger('App');
+    this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    await this.setupPostgres();
+    this.setupAppApi();
     this.setupGemini();
     this.setupRobotJs();
+    this.setupTracker();
+    this.setupPlanExecutor();
     this.setupHttpServer();
     this.setupWebSocketServer();
     this.setupGracefulShutdown();
@@ -79,6 +95,34 @@ export class App {
     this.logger.info('RobotJS plugin initialized');
   }
 
+  private setupTracker(): void {
+    this.tracker = new TrackerPlugin();
+    this.logger.info('Tracker plugin initialized');
+  }
+
+  private async setupPostgres(): Promise<void> {
+    try {
+      this.postgres = new PostgresPlugin();
+      await this.postgres.initialize();
+      this.logger.info('PostgreSQL plugin initialized successfully');
+    } catch (error) {
+      this.logger.error('Failed to initialize PostgreSQL plugin', error);
+    }
+  }
+
+  private setupAppApi(): void {
+    try {
+      this.appApi = new AppApiPlugin(this.postgres);
+      this.logger.info('App API plugin initialized successfully');
+    } catch (error) {
+      this.logger.error('Failed to initialize App API plugin', error);
+    }
+  }
+
+  private setupPlanExecutor(): void {
+    this.planExecutor = new PlanExecutor();
+    this.logger.info('Plan executor initialized');
+  }
 
 
   private setupHttpServer(): void {
@@ -184,9 +228,107 @@ export class App {
       case '/api/upload':
         this.handleFileUpload(req, res);
         break;
+      case '/api/tracker/start':
+        this.handleTrackerStart(req, res);
+        break;
+      case '/api/tracker/stop':
+        this.handleTrackerStop(req, res);
+        break;
+      case '/api/tracker/status':
+        this.handleTrackerStatus(req, res);
+        break;
+      case '/api/tracker/clear':
+        this.handleTrackerClear(req, res);
+        break;
+      case '/api/tracker/export':
+        this.handleTrackerExport(req, res);
+        break;
+      case '/api/tracker/replay':
+        this.handleTrackerReplay(req, res);
+        break;
+      case '/api/tracker/record-click':
+        this.handleTrackerRecordClick(req, res);
+        break;
+      case '/api/tracker/record-key':
+        this.handleTrackerRecordKey(req, res);
+        break;
+      case '/api/tracker/record-scroll':
+        this.handleTrackerRecordScroll(req, res);
+        break;
+      case '/api/tracker/record-double-click':
+        this.handleTrackerRecordDoubleClick(req, res);
+        break;
+      case '/api/plan/execute':
+        this.handlePlanExecute(req, res);
+        break;
+      case '/api/plan/status':
+        this.handlePlanStatus(req, res);
+        break;
+      case '/api/plan/stop':
+        this.handlePlanStop(req, res);
+        break;
+      case '/api/plan/execute-recorded':
+        this.handlePlanExecuteRecorded(req, res);
+        break;
+      case '/api/plan/execute-sequence':
+        this.handlePlanExecuteSequence(req, res);
+        break;
+      case '/api/tracker/sequence':
+        this.handleGetRecordedSequence(req, res);
+        break;
+      // Agent Recordings API
+      case '/api/recordings':
+        this.handleRecordings(req, res);
+        break;
+      case '/api/recordings/':
+        this.handleRecordings(req, res);
+        break;
+      // Scheduled Recordings API
+      case '/api/scheduled':
+        this.handleScheduledRecordings(req, res);
+        break;
+      case '/api/scheduled/':
+        this.handleScheduledRecordings(req, res);
+        break;
+      // Database Health API
+      case '/api/db/health':
+        this.handleDatabaseHealth(req, res);
+        break;
+      case '/api/db/stats':
+        this.handleDatabaseStats(req, res);
+        break;
+      // AI Modes API
+      case '/api/ai-modes':
+        this.handleAiModes(req, res);
+        break;
+      case '/api/ai-modes/':
+        this.handleAiModes(req, res);
+        break;
+      case '/api/ai-modes/active':
+        this.handleActiveAiModes(req, res);
+        break;
+      case '/api/ai-modes/toggle':
+        this.handleToggleAiMode(req, res);
+        break;
       default:
+        // Handle AI modes by department
+        if (req.url?.startsWith('/api/ai-modes/department')) {
+          this.handleAiModesByDepartment(req, res);
+        }
+        // Handle individual AI mode operations (GET, PUT, DELETE by ID)
+        else if (req.url?.startsWith('/api/ai-modes/') && req.url.split('/').length === 4) {
+          this.handleAiModes(req, res);
+        }
+        // Handle individual recording operations (GET, PUT, DELETE by ID)
+        else if (req.url?.startsWith('/api/recordings/') && req.url.split('/').length === 4) {
+          this.handleRecordings(req, res);
+        }
+        // Handle department config files
+        else if (req.url?.startsWith('/departments/') && req.url.endsWith('/config.json')) {
+          this.handleDepartmentConfig(req, res);
+        }
         // Try to serve static files from public directory
-        if (method === 'GET') {
+        else if (method === 'GET') {
           this.handleStaticFile(req, res);
         } else {
           this.handleNotFound(req, res);
@@ -328,6 +470,47 @@ export class App {
       
     } catch (error) {
       this.logger.error('Error serving static file', error);
+      this.handleNotFound(req, res);
+    }
+  }
+
+  private handleDepartmentConfig(req: IncomingMessage, res: ServerResponse): void {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const url = req.url || '';
+      
+      // Security check: prevent directory traversal
+      if (url.includes('..') || url.includes('~')) {
+        this.handleNotFound(req, res);
+        return;
+      }
+      
+      // Extract department name from URL (e.g., /departments/analytics/config.json -> analytics)
+      const urlParts = url.split('/');
+      if (urlParts.length !== 4 || urlParts[1] !== 'departments' || urlParts[3] !== 'config.json') {
+        this.handleNotFound(req, res);
+        return;
+      }
+      
+      const departmentName = urlParts[2];
+      const filePath = path.join(__dirname, '../departments', departmentName, 'config.json');
+      
+      if (!fs.existsSync(filePath)) {
+        this.handleNotFound(req, res);
+        return;
+      }
+      
+      // Read and serve the config file
+      const fileContent = fs.readFileSync(filePath);
+      res.writeHead(200, { 
+        'Content-Type': 'application/json',
+        'Content-Length': fileContent.length
+      });
+      res.end(fileContent);
+      
+    } catch (error) {
+      this.logger.error('Error serving department config', error);
       this.handleNotFound(req, res);
     }
   }
@@ -593,6 +776,637 @@ export class App {
         reject(error);
       });
     });
+  }
+
+  // Tracker API handlers
+  private handleTrackerStart(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      this.tracker.startTracking();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Tracking started' }));
+    } catch (error) {
+      this.logger.error('Error starting tracker', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to start tracking' }));
+    }
+  }
+
+  private async handleTrackerStop(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      await this.tracker.endTracking();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Tracking stopped and sequence copied to clipboard' }));
+    } catch (error) {
+      this.logger.error('Error stopping tracker', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to stop tracking' }));
+    }
+  }
+
+  private handleTrackerStatus(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      const status = this.tracker.getTrackingStatus();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, status }));
+    } catch (error) {
+      this.logger.error('Error getting tracker status', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get tracking status' }));
+    }
+  }
+
+  private handleTrackerClear(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      this.tracker.clearSequence();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Sequence cleared' }));
+    } catch (error) {
+      this.logger.error('Error clearing tracker sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to clear sequence' }));
+    }
+  }
+
+  private async handleTrackerExport(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await this.getRequestBody(req);
+      const filename = JSON.parse(body).filename;
+      
+      const filepath = await this.tracker.exportSequenceToFile(filename);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, filepath }));
+    } catch (error) {
+      this.logger.error('Error exporting tracker sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to export sequence' }));
+    }
+  }
+
+  private async handleTrackerReplay(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await this.getRequestBody(req);
+      const sequence = JSON.parse(body).sequence;
+      
+      await this.tracker.replaySequence(sequence);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Sequence replayed successfully' }));
+    } catch (error) {
+      this.logger.error('Error replaying tracker sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to replay sequence' }));
+    }
+  }
+
+  private handleTrackerRecordClick(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      this.tracker.manualRecordLeftClick();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Click recorded' }));
+    } catch (error) {
+      this.logger.error('Error recording click', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to record click' }));
+    }
+  }
+
+  private async handleTrackerRecordKey(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await this.getRequestBody(_req);
+      const { key, modifiers } = JSON.parse(body);
+      this.tracker.manualRecordKeyPress(key, modifiers);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Key recorded' }));
+    } catch (error) {
+      this.logger.error('Error recording key', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to record key' }));
+    }
+  }
+
+  private async handleTrackerRecordScroll(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const body = await this.getRequestBody(_req);
+      const { direction, amount } = JSON.parse(body);
+      this.tracker.manualRecordScroll(direction, amount);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Scroll recorded' }));
+    } catch (error) {
+      this.logger.error('Error recording scroll', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to record scroll' }));
+    }
+  }
+
+  private handleTrackerRecordDoubleClick(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      this.tracker.manualRecordDoubleClick();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Double click recorded' }));
+    } catch (error) {
+      this.logger.error('Error recording double click', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to record double click' }));
+    }
+  }
+
+  private async handlePlanExecute(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const body = await this.getRequestBody(req);
+      const { planKey, departmentKey, speed = 1.0 } = JSON.parse(body);
+
+      if (!planKey || !departmentKey) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing planKey or departmentKey' }));
+        return;
+      }
+
+      // Load the department config to get the plan
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(__dirname, '../departments', departmentKey, 'config.json');
+      
+      if (!fs.existsSync(configPath)) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Department not found' }));
+        return;
+      }
+
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const plan = config.strategies?.find((s: any) => s.key === planKey);
+
+      if (!plan) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Plan not found' }));
+        return;
+      }
+
+      const success = await this.planExecutor.executePlan(plan, speed);
+      
+      if (success) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Plan execution started' }));
+      } else {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Plan execution already in progress' }));
+      }
+    } catch (error) {
+      this.logger.error('Error executing plan', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to execute plan' }));
+    }
+  }
+
+  private handlePlanStatus(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      const status = this.planExecutor.getExecutionStatus();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, status }));
+    } catch (error) {
+      this.logger.error('Error getting plan status', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get plan status' }));
+    }
+  }
+
+  private handlePlanStop(_req: IncomingMessage, res: ServerResponse): void {
+    try {
+      this.planExecutor.stopExecution();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: 'Plan execution stopped' }));
+    } catch (error) {
+      this.logger.error('Error stopping plan execution', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to stop plan execution' }));
+    }
+  }
+
+  private async handlePlanExecuteRecorded(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const body = await this.getRequestBody(req);
+      const { speed = 1.0 } = JSON.parse(body);
+
+      // Get the current recorded sequence from tracker
+      const plan = this.tracker.convertToPlanFormat();
+      
+      if (!plan) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No recorded sequence available' }));
+        return;
+      }
+
+      const success = await this.planExecutor.executePlan(plan, speed);
+      
+      if (success) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Recorded sequence execution started' }));
+      } else {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Plan execution already in progress' }));
+      }
+    } catch (error) {
+      this.logger.error('Error executing recorded sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to execute recorded sequence' }));
+    }
+  }
+
+  private async handlePlanExecuteSequence(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const body = await this.getRequestBody(req);
+      const { sequence, speed = 1.0 } = JSON.parse(body);
+
+      if (!sequence) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Sequence data is required' }));
+        return;
+      }
+
+      // Execute the sequence using the plan executor
+      const success = await this.planExecutor.executePlan(sequence, speed);
+      
+      if (success) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Sequence execution started' }));
+      } else {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Plan execution already in progress' }));
+      }
+    } catch (error) {
+      this.logger.error('Error executing sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to execute sequence' }));
+    }
+  }
+
+  private async handleGetRecordedSequence(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      // Get the current recorded sequence from tracker
+      const plan = this.tracker.convertToPlanFormat();
+      const rawSequence = this.tracker.getSequence();
+      
+      if (!plan || rawSequence.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'No recorded sequence available' }));
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        success: true, 
+        data: {
+          plan: plan,
+          rawSequence: rawSequence,
+          eventCount: rawSequence.length,
+          duration: rawSequence.length > 0 ? 
+            (rawSequence[rawSequence.length - 1]?.timestamp || 0) - (rawSequence[0]?.timestamp || 0) : 0
+        }
+      }));
+    } catch (error) {
+      this.logger.error('Error getting recorded sequence', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get recorded sequence' }));
+    }
+  }
+
+  // ========================================
+  // DATABASE API HANDLERS
+  // ========================================
+
+  private async handleRecordings(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const { method } = req;
+      const url = req.url || '';
+      const id = url.split('/').pop();
+
+      switch (method) {
+        case 'GET':
+          if (id && id !== 'recordings') {
+            // Get single recording by ID
+            const result = await this.appApi.getAgentRecordingById(id);
+            res.writeHead(result.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          } else {
+            // Get all recordings
+            const result = await this.appApi.getAllAgentRecordings();
+            res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          }
+          break;
+
+        case 'POST':
+          // Create new recording
+          const body = await this.getRequestBody(req);
+          const newRecording = JSON.parse(body);
+          const createResult = await this.appApi.createAgentRecording(newRecording);
+          res.writeHead(createResult.success ? 201 : 400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(createResult));
+          break;
+
+        case 'PUT':
+          // Update recording
+          if (id && id !== 'recordings') {
+            const updateBody = await this.getRequestBody(req);
+            const updates = JSON.parse(updateBody);
+            const updateResult = await this.appApi.updateAgentRecording(id, updates);
+            res.writeHead(updateResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(updateResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Recording ID required for update' }));
+          }
+          break;
+
+        case 'DELETE':
+          // Delete recording
+          if (id && id !== 'recordings') {
+            const deleteResult = await this.appApi.deleteAgentRecording(id);
+            res.writeHead(deleteResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(deleteResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Recording ID required for deletion' }));
+          }
+          break;
+
+        default:
+          res.writeHead(405, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Method not allowed' }));
+      }
+    } catch (error) {
+      this.logger.error('Error handling recordings API', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+  }
+
+  private async handleScheduledRecordings(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const { method } = req;
+      const url = req.url || '';
+      const id = url.split('/').pop();
+
+      switch (method) {
+        case 'GET':
+          if (id && id !== 'scheduled') {
+            // Get single scheduled recording by ID
+            const result = await this.appApi.getScheduledRecordingById(id);
+            res.writeHead(result.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          } else {
+            // Get all scheduled recordings with details
+            const result = await this.appApi.getScheduledRecordingsWithDetails();
+            res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          }
+          break;
+
+        case 'POST':
+          // Create new scheduled recording
+          const body = await this.getRequestBody(req);
+          const newScheduled = JSON.parse(body);
+          const createResult = await this.appApi.createScheduledRecording(newScheduled);
+          res.writeHead(createResult.success ? 201 : 400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(createResult));
+          break;
+
+        case 'PUT':
+          // Update scheduled recording
+          if (id && id !== 'scheduled') {
+            const updateBody = await this.getRequestBody(req);
+            const updates = JSON.parse(updateBody);
+            const updateResult = await this.appApi.updateScheduledRecording(id, updates);
+            res.writeHead(updateResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(updateResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Scheduled recording ID required for update' }));
+          }
+          break;
+
+        case 'DELETE':
+          // Delete scheduled recording
+          if (id && id !== 'scheduled') {
+            const deleteResult = await this.appApi.deleteScheduledRecording(id);
+            res.writeHead(deleteResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(deleteResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'Scheduled recording ID required for deletion' }));
+          }
+          break;
+
+        default:
+          res.writeHead(405, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Method not allowed' }));
+      }
+    } catch (error) {
+      this.logger.error('Error handling scheduled recordings API', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+  }
+
+  private async handleDatabaseHealth(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const result = await this.appApi.getHealthStatus();
+      res.writeHead(result.success ? 200 : 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      this.logger.error('Error getting database health', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get database health' }));
+    }
+  }
+
+  private async handleDatabaseStats(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const result = await this.appApi.getDatabaseStats();
+      res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      this.logger.error('Error getting database stats', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get database stats' }));
+    }
+  }
+
+  // ========================================
+  // AI MODES API HANDLERS
+  // ========================================
+
+  private async handleAiModes(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const { method } = req;
+      const url = req.url || '';
+      const id = url.split('/').pop();
+
+      switch (method) {
+        case 'GET':
+          if (id && id !== 'ai-modes') {
+            // Get single AI mode by ID
+            const result = await this.appApi.getAiModeById(id);
+            res.writeHead(result.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          } else {
+            // Get all AI modes
+            const result = await this.appApi.getAllAiModes();
+            res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+          }
+          break;
+
+        case 'POST':
+          // Create new AI mode
+          const body = await this.getRequestBody(req);
+          const newMode = JSON.parse(body);
+          const createResult = await this.appApi.createAiMode(newMode);
+          res.writeHead(createResult.success ? 201 : 400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(createResult));
+          break;
+
+        case 'PUT':
+          // Update AI mode
+          if (id && id !== 'ai-modes') {
+            const updateBody = await this.getRequestBody(req);
+            const updates = JSON.parse(updateBody);
+            const updateResult = await this.appApi.updateAiMode(id, updates);
+            res.writeHead(updateResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(updateResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'AI mode ID required for update' }));
+          }
+          break;
+
+        case 'DELETE':
+          // Delete AI mode
+          if (id && id !== 'ai-modes') {
+            const deleteResult = await this.appApi.deleteAiMode(id);
+            res.writeHead(deleteResult.success ? 200 : 404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(deleteResult));
+          } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: 'AI mode ID required for deletion' }));
+          }
+          break;
+
+        default:
+          res.writeHead(405, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Method not allowed' }));
+      }
+    } catch (error) {
+      this.logger.error('Error handling AI modes API', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Internal server error' }));
+    }
+  }
+
+  private async handleActiveAiModes(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const result = await this.appApi.getActiveAiModes();
+      res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      this.logger.error('Error getting active AI modes', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get active AI modes' }));
+    }
+  }
+
+  private async handleAiModesByDepartment(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'GET') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const url = new URL(req.url || '', `http://${req.headers.host}`);
+      const department = url.searchParams.get('department');
+      
+      if (!department) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Department parameter required' }));
+        return;
+      }
+
+      const result = await this.appApi.getAiModesByDepartment(department);
+      res.writeHead(result.success ? 200 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      this.logger.error('Error getting AI modes by department', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to get AI modes by department' }));
+    }
+  }
+
+  private async handleToggleAiMode(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.method !== 'POST') {
+      res.writeHead(405, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+
+    try {
+      const body = await this.getRequestBody(req);
+      const { id } = JSON.parse(body);
+      
+      if (!id) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'AI mode ID required' }));
+        return;
+      }
+
+      const result = await this.appApi.toggleAiModeActive(id);
+      res.writeHead(result.success ? 200 : 404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      this.logger.error('Error toggling AI mode active status', error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to toggle AI mode active status' }));
+    }
   }
 
   private setupGracefulShutdown(): void {

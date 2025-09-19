@@ -1,48 +1,112 @@
-version: '3.8'
-
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ams-agentic-company-app
     ports:
       - "8080:8080"  # HTTP server
       - "8081:8081"  # WebSocket server
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=docker
       - HOST=0.0.0.0
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - app-network
-
-  # Development service (optional)
-  app-dev:
-    build: 
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:8080"  # HTTP server
-      - "3001:8081"  # WebSocket server
-    env_file:
-      - .env
-    environment:
-      - NODE_ENV=development
-      - HOST=0.0.0.0
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ams_agentic_company
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - KAFKA_BROKERS=kafka:9092
     volumes:
       - .:/app
       - /app/node_modules
-    command: npm run dev
-    profiles:
-      - dev
+    depends_on:
+      - postgres
+      - redis
+      - elasticsearch
+      - kafka
     networks:
-      - app-network
+      - ams_agentic_company_network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: ams-agentic-company-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ams_agentic_company
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - ams_agentic_company_network
+
+  redis:
+    image: redis:latest
+    container_name: ams-agentic-company-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ams_agentic_company_network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: ams-agentic-company-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - ams_agentic_company_network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: ams-agentic-company-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ams_agentic_company_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: ams-agentic-company-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - ams_agentic_company_network
+
+volumes:
+  postgres_data:
+  elasticsearch_data:
+  kafka_data:
 
 networks:
-  app-network:
+  ams_agentic_company_network:
+    name: ams_agentic_company_network
     driver: bridge

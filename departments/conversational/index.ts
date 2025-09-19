@@ -1,4 +1,4 @@
-class LegalDepartment {
+class ConversationalDepartment {
     private config: any;
     private responsibilities: any;
 
@@ -8,4 +8,4 @@ class LegalDepartment {
     }
 }
 
-export default LegalDepartment;
+export default ConversationalDepartment;

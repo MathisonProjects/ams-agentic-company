@@ -1,7 +1,16 @@
 import { Logger } from '../utils/logger';
-import robotjs from 'robotjs';
 import fs from 'fs';
 import path from 'path';
+
+// Conditional import for robotjs - only available in non-Docker environments
+let robotjs: any = null;
+try {
+    if (process.env['NODE_ENV'] !== 'docker') {
+        robotjs = require('robotjs');
+    }
+} catch (error) {
+    // robotjs not available, will use mock functions
+}
 
 export interface MouseLocationEvent {
     x: number;
@@ -14,9 +23,15 @@ export class RobotJsPlugin {
 
     constructor() {
         this.logger = new Logger('RobotJS');
-        // Initialize robotjs with delays for more human-like behavior
-        robotjs.setMouseDelay(2);
-        robotjs.setKeyboardDelay(100);
+        
+        if (robotjs) {
+            // Initialize robotjs with delays for more human-like behavior
+            robotjs.setMouseDelay(2);
+            robotjs.setKeyboardDelay(100);
+            this.logger.info('RobotJS initialized successfully');
+        } else {
+            this.logger.warn('RobotJS not available - running in Docker mode with mock functions');
+        }
         
         // Ensure tmp directory exists
         this.ensureTmpDirectory();
@@ -38,6 +53,11 @@ export class RobotJsPlugin {
      */
     async openBrowser(url: string): Promise<void> {
         try {
+            if (!robotjs) {
+                this.logger.info('Mock: Browser would open URL:', url);
+                return;
+            }
+            
             const command = `open "${url}"`;
             const { exec } = require('child_process');
             
@@ -59,6 +79,11 @@ export class RobotJsPlugin {
      */
     async mouseMove(x: number, y: number): Promise<void> {
         try {
+            if (!robotjs) {
+                this.logger.info('Mock: Mouse moved to', { x, y });
+                return;
+            }
+            
             // Get current mouse position
             const pos = robotjs.getMousePos();
             
@@ -86,6 +111,11 @@ export class RobotJsPlugin {
      */
     async leftClick(x?: number, y?: number): Promise<void> {
         try {
+            if (!robotjs) {
+                this.logger.info('Mock: Left click performed', x !== undefined ? { x, y } : 'at current position');
+                return;
+            }
+            
             if (x !== undefined && y !== undefined) {
                 await this.mouseMove(x, y);
             }

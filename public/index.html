@@ -35,6 +35,14 @@
                         <span class="material-icons">psychology</span>
                         AI Modes
                     </h3>
+                    <div class="sidebar-header-actions">
+                        <button class="toggle-modes-button" id="toggleModesView" onclick="toggleModesView()" title="Show all AI modes (including inactive)">
+                            Show All
+                        </button>
+                        <button class="create-mode-button" onclick="openCreateModeModal()" title="Create new AI mode">
+                            <span class="material-icons">add</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="modes-search">
                     <div class="search-container">
@@ -62,18 +70,38 @@
                     <div class="conversation-header">
                         <h3>Conversation History</h3>
                         <div class="conversation-actions">
-                            <button class="copy-conversation-button" onclick="copyConversation()" title="Copy entire conversation">
-                                <span class="material-icons">chat</span>
-                                Copy Chat
-                            </button>
-                            <button class="copy-last-response-button" onclick="copyLastResponse()" title="Copy last AI response">
-                                <span class="material-icons">content_copy</span>
-                                Copy Last
-                            </button>
-                            <button class="create-sequence-button" onclick="createSequence()" title="Create sequence from conversation">
-                                <span class="material-icons">edit</span>
-                                Create Sequence
-                            </button>
+                            <div class="actions-dropdown-container">
+                                <button class="actions-dropdown-button" onclick="toggleActionsDropdown()" title="Conversation actions">
+                                    <span class="material-icons">more_vert</span>
+                                    Actions
+                                </button>
+                                <div class="actions-dropdown-menu" id="actionsDropdown">
+                                    <div class="actions-dropdown-item" onclick="copyConversation()">
+                                        <span class="material-icons">chat</span>
+                                        Copy Chat
+                                    </div>
+                                    <div class="actions-dropdown-item" onclick="copyLastResponse()">
+                                        <span class="material-icons">content_copy</span>
+                                        Copy Last
+                                    </div>
+                                                            <div class="actions-dropdown-item" onclick="createSequence()">
+                            <span class="material-icons">edit</span>
+                            Create Sequence
+                        </div>
+                        <div class="actions-dropdown-item" onclick="executeRecordedSequence()">
+                            <span class="material-icons">play_arrow</span>
+                            Execute Recorded
+                        </div>
+                        <div class="actions-dropdown-item" onclick="checkExecutionStatus()">
+                            <span class="material-icons">refresh</span>
+                            Check Status
+                        </div>
+                        <div class="actions-dropdown-item" onclick="testPolling()">
+                            <span class="material-icons">bug_report</span>
+                            Test Polling
+                        </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="conversation" id="conversation">
@@ -158,6 +186,33 @@
                             Clear
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Strategy Selection Sidebar -->
+            <div class="strategy-sidebar">
+                <div class="strategy-sidebar-header">
+                    <h3>
+                        <span class="material-icons">play_arrow</span>
+                        Play Sequence
+                    </h3>
+                </div>
+                <div class="strategy-search">
+                    <div class="search-container">
+                        <span class="material-icons search-icon">search</span>
+                        <input 
+                            type="text" 
+                            id="strategySearch" 
+                            placeholder="Search strategies..." 
+                            class="strategy-search-input"
+                        >
+                        <button class="search-clear" id="strategySearchClear" onclick="clearStrategySearch()" style="display: none;">
+                            <span class="material-icons">close</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="strategy-list" id="strategyList">
+                    <!-- Strategies will be populated here -->
                 </div>
             </div>
         </div>
@@ -287,6 +342,461 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Create AI Mode Modal -->
+    <div class="modal-overlay" id="createModeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Create AI Mode</h2>
+                <button class="modal-close" onclick="closeCreateModeModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 16px;">
+                    <label for="createModeName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        Mode Name: *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="createModeName" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter mode name..."
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="createModeDescription" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        Description:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="createModeDescription" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter mode description..."
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="createModeAiName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        AI Name:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="createModeAiName" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter AI name..."
+                        value="Silma AI"
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="createModeSystemMessage" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        System Message:
+                    </label>
+                    <textarea 
+                        id="createModeSystemMessage" 
+                        class="system-message-field"
+                        placeholder="Enter a system message to set the AI's behavior and personality..."
+                    ></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label for="createModeIcon" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                            Icon:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="createModeIcon" 
+                            class="system-message-field"
+                            style="min-height: auto; height: 48px;"
+                            placeholder="Material icon name..."
+                            value="psychology"
+                        >
+                    </div>
+                    <div>
+                        <label for="createModeDepartment" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                            Department:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="createModeDepartment" 
+                            class="system-message-field"
+                            style="min-height: auto; height: 48px;"
+                            placeholder="Enter department..."
+                        >
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; color: #424242;">
+                        <input type="checkbox" id="createModeActive" checked>
+                        Active
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; color: #424242;">Generation Settings</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Temperature</span>
+                                <span class="slider-value" id="createModeTempValue">0.7</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="createModeTemperature" 
+                                min="0" 
+                                max="2" 
+                                step="0.1" 
+                                value="0.7"
+                                class="mdc-slider"
+                                oninput="document.getElementById('createModeTempValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">0.0 - 2.0 (creativity)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Max Tokens</span>
+                                <span class="slider-value" id="createModeTokenValue">4096</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="createModeMaxTokens" 
+                                min="100" 
+                                max="4096" 
+                                step="100" 
+                                value="4096"
+                                class="mdc-slider"
+                                oninput="document.getElementById('createModeTokenValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">100 - 4096 tokens</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top P</span>
+                                <span class="slider-value" id="createModeTopPValue">0.8</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="createModeTopP" 
+                                min="0" 
+                                max="1" 
+                                step="0.1" 
+                                value="0.8"
+                                class="mdc-slider"
+                                oninput="document.getElementById('createModeTopPValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">0.0 - 1.0 (nucleus sampling)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top K</span>
+                                <span class="slider-value" id="createModeTopKValue">40</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="createModeTopK" 
+                                min="1" 
+                                max="100" 
+                                step="1" 
+                                value="40"
+                                class="mdc-slider"
+                                oninput="document.getElementById('createModeTopKValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">1 - 100 (top-k sampling)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mdc-button mdc-button--outlined" onclick="closeCreateModeModal()">
+                    Cancel
+                </button>
+                <button class="mdc-button mdc-button--raised" onclick="saveCreateMode()">
+                    <span class="material-icons">add</span>
+                    Create Mode
+                </button>
+            </div>
         </div>
+    </div>
+
+    <!-- Edit AI Mode Modal -->
+    <div class="modal-overlay" id="editModeModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit AI Mode</h2>
+                <button class="modal-close" onclick="closeEditModeModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editModeId">
+                
+                <div style="margin-bottom: 16px;">
+                    <label for="editModeName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        Mode Name: *
+                    </label>
+                    <input 
+                        type="text" 
+                        id="editModeName" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter mode name..."
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="editModeDescription" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        Description:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="editModeDescription" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter mode description..."
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="editModeAiName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        AI Name:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="editModeAiName" 
+                        class="system-message-field"
+                        style="min-height: auto; height: 48px;"
+                        placeholder="Enter AI name..."
+                    >
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label for="editModeSystemMessage" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                        System Message:
+                    </label>
+                    <textarea 
+                        id="editModeSystemMessage" 
+                        class="system-message-field"
+                        placeholder="Enter a system message to set the AI's behavior and personality..."
+                    ></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label for="editModeIcon" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                            Icon:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="editModeIcon" 
+                            class="system-message-field"
+                            style="min-height: auto; height: 48px;"
+                            placeholder="Material icon name..."
+                        >
+                    </div>
+                    <div>
+                        <label for="editModeDepartment" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                            Department:
+                        </label>
+                        <input 
+                            type="text" 
+                            id="editModeDepartment" 
+                            class="system-message-field"
+                            style="min-height: auto; height: 48px;"
+                            placeholder="Enter department..."
+                        >
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; color: #424242;">
+                        <input type="checkbox" id="editModeActive">
+                        Active
+                    </label>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <h3 style="margin: 0 0 16px 0; font-size: 1.1rem; color: #424242;">Generation Settings</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Temperature</span>
+                                <span class="slider-value" id="editModeTempValue">0.7</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="editModeTemperature" 
+                                min="0" 
+                                max="2" 
+                                step="0.1" 
+                                value="0.7"
+                                class="mdc-slider"
+                                oninput="document.getElementById('editModeTempValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">0.0 - 2.0 (creativity)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Max Tokens</span>
+                                <span class="slider-value" id="editModeTokenValue">4096</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="editModeMaxTokens" 
+                                min="100" 
+                                max="4096" 
+                                step="100" 
+                                value="4096"
+                                class="mdc-slider"
+                                oninput="document.getElementById('editModeTokenValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">100 - 4096 tokens</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top P</span>
+                                <span class="slider-value" id="editModeTopPValue">0.8</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="editModeTopP" 
+                                min="0" 
+                                max="1" 
+                                step="0.1" 
+                                value="0.8"
+                                class="mdc-slider"
+                                oninput="document.getElementById('editModeTopPValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">0.0 - 1.0 (nucleus sampling)</div>
+                        </div>
+
+                        <div class="slider-container">
+                            <div class="slider-label">
+                                <span>Top K</span>
+                                <span class="slider-value" id="editModeTopKValue">40</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                id="editModeTopK" 
+                                min="1" 
+                                max="100" 
+                                step="1" 
+                                value="40"
+                                class="mdc-slider"
+                                oninput="document.getElementById('editModeTopKValue').textContent = this.value"
+                            >
+                            <div class="slider-hint">1 - 100 (top-k sampling)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mdc-button mdc-button--outlined" onclick="closeEditModeModal()">
+                    Cancel
+                </button>
+                <button class="mdc-button mdc-button--raised" onclick="saveEditMode()">
+                    <span class="material-icons">save</span>
+                    Update Mode
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sequence Modal -->
+    <div class="modal-overlay" id="sequenceModal">
+        <div class="modal" style="max-width: 90%; max-height: 90%; width: 1200px;">
+            <div class="modal-header">
+                <h2>Save Recorded Sequence</h2>
+                <button class="modal-close" onclick="closeSequenceModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                    <!-- Left side - Form -->
+                    <div>
+                        <div style="margin-bottom: 16px;">
+                            <label for="sequenceName" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                                Sequence Name: *
+                            </label>
+                            <input 
+                                type="text" 
+                                id="sequenceName" 
+                                class="system-message-field"
+                                style="min-height: auto; height: 48px;"
+                                placeholder="Enter sequence name..."
+                            >
+                        </div>
+
+                        <div style="margin-bottom: 16px;">
+                            <label for="sequenceDescription" style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                                Description:
+                            </label>
+                            <textarea 
+                                id="sequenceDescription" 
+                                class="system-message-field"
+                                placeholder="Enter sequence description..."
+                                rows="3"
+                            ></textarea>
+                        </div>
+
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; gap: 16px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500; color: #424242;">
+                                        Events:
+                                    </label>
+                                    <span id="sequenceEventCount" style="font-size: 1.2rem; font-weight: bold; color: #0D3F44;">0</span>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 4px; font-weight: 500; color: #424242;">
+                                        Duration:
+                                    </label>
+                                    <span id="sequenceDuration" style="font-size: 1.2rem; font-weight: bold; color: #0D3F44;">0 seconds</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right side - JSON Preview -->
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #424242;">
+                            Sequence Data (JSON):
+                        </label>
+                        <div style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 12px; max-height: 400px; overflow-y: auto;">
+                            <pre id="sequenceJson" style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; color: #333; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="mdc-button mdc-button--outlined" onclick="closeSequenceModal()">
+                    Cancel
+                </button>
+                <button class="mdc-button mdc-button--raised" onclick="saveSequence()">
+                    <span class="material-icons">save</span>
+                    Save Sequence
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

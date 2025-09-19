@@ -11,6 +11,9 @@ let topK = 40;
 let currentMode = null;
 let modes = [];
 let filteredModes = [];
+let strategies = [];
+let filteredStrategies = [];
+let isSequenceRecording = false; // Track if we're currently recording a sequence
 let conversationHistory = [
     {
         role: 'assistant',
@@ -19,6 +22,7 @@ let conversationHistory = [
     }
 ];
 let attachedFiles = [];
+let showAllModes = false; // Track whether to show all modes or only active ones
 
 // Status Management
 function updateStatus(status, text) {
@@ -702,12 +706,261 @@ function copyLastResponse() {
 }
 
 function createSequence() {
-    console.log('Create Sequence button clicked!');
+    console.log('Create/End Sequence button clicked!');
     console.log('Current conversation history:', conversationHistory);
     console.log('Current mode:', currentMode);
     
-    // TODO: Implement sequence creation functionality
-    updateStatus('connected', 'Create Sequence clicked - check console for details');
+    // Toggle sequence recording state
+    isSequenceRecording = !isSequenceRecording;
+    
+    // Find the sequence item in the dropdown
+    const sequenceItem = document.querySelector('.actions-dropdown-item[onclick="createSequence()"]');
+    const buttonIcon = sequenceItem?.querySelector('.material-icons');
+    const buttonText = sequenceItem?.querySelector('span:not(.material-icons)');
+    
+    if (isSequenceRecording) {
+        // Start recording sequence
+        startSequenceRecording(sequenceItem, buttonIcon, buttonText);
+    } else {
+        // Stop recording sequence
+        stopSequenceRecording(sequenceItem, buttonIcon, buttonText);
+    }
+}
+
+async function startSequenceRecording(sequenceItem, buttonIcon, buttonText) {
+    try {
+        // Call the tracker start endpoint
+        const response = await fetch('/api/tracker/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Switch to "End Sequence" state
+            if (buttonIcon) buttonIcon.textContent = 'stop';
+            if (buttonText) buttonText.textContent = 'End Sequence';
+            if (sequenceItem) {
+                sequenceItem.title = 'End sequence recording';
+                sequenceItem.classList.add('recording');
+            }
+            
+            console.log('Started sequence recording');
+            updateStatus('connected', 'Sequence recording started');
+        } else {
+            // Revert the state if the API call failed
+            isSequenceRecording = false;
+            console.error('Failed to start sequence recording:', result.error);
+            updateStatus('disconnected', 'Failed to start sequence recording');
+        }
+    } catch (error) {
+        // Revert the state if there was an error
+        isSequenceRecording = false;
+        console.error('Error starting sequence recording:', error);
+        updateStatus('disconnected', 'Error starting sequence recording');
+    }
+}
+
+async function stopSequenceRecording(sequenceItem, buttonIcon, buttonText) {
+    try {
+        // Call the tracker stop endpoint
+        const response = await fetch('/api/tracker/stop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Switch back to "Create Sequence" state
+            if (buttonIcon) buttonIcon.textContent = 'edit';
+            if (buttonText) buttonText.textContent = 'Create Sequence';
+            if (sequenceItem) {
+                sequenceItem.title = 'Create sequence from conversation';
+                sequenceItem.classList.remove('recording');
+            }
+            
+            console.log('Ended sequence recording');
+            updateStatus('connected', 'Sequence recording ended');
+            
+            // Show the sequence modal
+            await showSequenceModal();
+        } else {
+            // Keep the recording state if the API call failed
+            isSequenceRecording = true;
+            console.error('Failed to stop sequence recording:', result.error);
+            updateStatus('disconnected', 'Failed to stop sequence recording');
+        }
+    } catch (error) {
+        // Keep the recording state if there was an error
+        isSequenceRecording = true;
+        console.error('Error stopping sequence recording:', error);
+        updateStatus('disconnected', 'Error stopping sequence recording');
+    }
+}
+
+async function executeRecordedSequence() {
+    try {
+        const response = await fetch('/api/plan/execute-recorded', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ speed: 1.0 })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('Recorded sequence execution started');
+        } else {
+            console.error('Failed to execute recorded sequence:', result.error);
+            updateStatus('disconnected', 'Failed to execute sequence: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error executing recorded sequence:', error);
+        updateStatus('disconnected', 'Error executing sequence');
+    }
+}
+
+async function showSequenceModal() {
+    try {
+        // Get the recorded sequence data
+        const response = await fetch('/api/tracker/sequence');
+        const result = await response.json();
+        
+        if (!result.success) {
+            console.error('Failed to get recorded sequence:', result.error);
+            updateStatus('disconnected', 'Failed to get recorded sequence');
+            return;
+        }
+        
+        // Populate the modal with sequence data
+        const modal = document.getElementById('sequenceModal');
+        const jsonDisplay = document.getElementById('sequenceJson');
+        const eventCount = document.getElementById('sequenceEventCount');
+        const duration = document.getElementById('sequenceDuration');
+        
+        if (jsonDisplay) {
+            jsonDisplay.textContent = JSON.stringify(result.data.plan, null, 2);
+        }
+        
+        if (eventCount) {
+            eventCount.textContent = result.data.eventCount;
+        }
+        
+        if (duration) {
+            const durationMs = result.data.duration;
+            const durationSec = Math.round(durationMs / 1000);
+            duration.textContent = `${durationSec} seconds`;
+        }
+        
+        // Clear the form fields
+        document.getElementById('sequenceName').value = '';
+        document.getElementById('sequenceDescription').value = '';
+        
+        // Show the modal
+        modal.classList.add('show');
+        
+    } catch (error) {
+        console.error('Error showing sequence modal:', error);
+        updateStatus('disconnected', 'Error showing sequence modal');
+    }
+}
+
+function closeSequenceModal() {
+    const modal = document.getElementById('sequenceModal');
+    modal.classList.remove('show');
+}
+
+async function saveSequence() {
+    try {
+        const name = document.getElementById('sequenceName').value.trim();
+        const description = document.getElementById('sequenceDescription').value.trim();
+        
+        if (!name) {
+            alert('Sequence name is required');
+            return;
+        }
+        
+        // Get the current sequence data
+        const response = await fetch('/api/tracker/sequence');
+        const result = await response.json();
+        
+        if (!result.success) {
+            console.error('Failed to get recorded sequence:', result.error);
+            updateStatus('disconnected', 'Failed to get recorded sequence');
+            return;
+        }
+        
+        // Save to database
+        const saveResponse = await fetch('/api/recordings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                sequence: result.data.plan
+            })
+        });
+        
+        const saveResult = await saveResponse.json();
+        
+        if (saveResult.success) {
+            closeSequenceModal();
+            updateStatus('connected', 'Sequence saved successfully');
+            
+            setTimeout(() => {
+                updateStatus('connected', 'Connected - Ready to chat');
+            }, 2000);
+        } else {
+            console.error('Failed to save sequence:', saveResult.error);
+            updateStatus('disconnected', 'Failed to save sequence: ' + saveResult.error);
+        }
+        
+    } catch (error) {
+        console.error('Error saving sequence:', error);
+        updateStatus('disconnected', 'Error saving sequence');
+    }
+}
+
+async function deleteSequence(sequenceId) {
+    if (!confirm('Are you sure you want to delete this sequence? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/recordings/${sequenceId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            updateStatus('connected', 'Sequence deleted successfully');
+            
+            // Reload the strategies list to reflect the deletion
+            await loadStrategies();
+            
+            setTimeout(() => {
+                updateStatus('connected', 'Connected - Ready to chat');
+            }, 2000);
+        } else {
+            console.error('Failed to delete sequence:', result.error);
+            updateStatus('disconnected', 'Failed to delete sequence: ' + result.error);
+        }
+        
+    } catch (error) {
+        console.error('Error deleting sequence:', error);
+        updateStatus('disconnected', 'Error deleting sequence');
+    }
 }
 
 function searchModes(query) {
@@ -758,17 +1011,28 @@ function renderModesList() {
     
     filteredModes.forEach((mode, index) => {
         const modeItem = document.createElement('div');
-        modeItem.className = 'mode-item';
-        modeItem.onclick = () => selectMode(mode);
+        modeItem.className = `mode-item ${!mode.is_active ? 'inactive' : ''}`;
         
         const icon = mode.icon || 'psychology'; // Default icon if none specified
         modeItem.innerHTML = `
-            <div class="mode-header">
+            <div class="mode-header" onclick="selectMode(${JSON.stringify(mode).replace(/"/g, '&quot;')})">
                 <span class="material-icons mode-icon">${icon}</span>
                 <div class="mode-info">
                     <div class="mode-name">${mode.name}</div>
                     <div class="mode-ai-name">${mode.aiName}</div>
+                    ${!mode.is_active ? '<div class="mode-status inactive">Inactive</div>' : ''}
                 </div>
+            </div>
+            <div class="mode-actions">
+                <button class="mode-action-button" onclick="openEditModeModal(${JSON.stringify(mode).replace(/"/g, '&quot;')})" title="Edit mode">
+                    <span class="material-icons">edit</span>
+                </button>
+                <button class="mode-action-button" onclick="toggleModeActive('${mode.id}')" title="${mode.is_active ? 'Deactivate' : 'Activate'} mode">
+                    <span class="material-icons">${mode.is_active ? 'visibility' : 'visibility_off'}</span>
+                </button>
+                <button class="mode-action-button" onclick="deleteMode('${mode.id}')" title="Delete mode">
+                    <span class="material-icons">delete</span>
+                </button>
             </div>
         `;
         
@@ -836,22 +1100,236 @@ function saveSettings() {
     }, 2000);
 }
 
+// AI Mode Modal Management
+function openCreateModeModal() {
+    const modal = document.getElementById('createModeModal');
+    
+    // Reset form fields
+    document.getElementById('createModeName').value = '';
+    document.getElementById('createModeDescription').value = '';
+    document.getElementById('createModeAiName').value = 'Silma AI';
+    document.getElementById('createModeSystemMessage').value = '';
+    document.getElementById('createModeIcon').value = 'psychology';
+    document.getElementById('createModeDepartment').value = '';
+    document.getElementById('createModeTemperature').value = '0.7';
+    document.getElementById('createModeMaxTokens').value = '4096';
+    document.getElementById('createModeTopP').value = '0.8';
+    document.getElementById('createModeTopK').value = '40';
+    document.getElementById('createModeActive').checked = true;
+    
+    // Update display values
+    document.getElementById('createModeTempValue').textContent = '0.7';
+    document.getElementById('createModeTokenValue').textContent = '4096';
+    document.getElementById('createModeTopPValue').textContent = '0.8';
+    document.getElementById('createModeTopKValue').textContent = '40';
+    
+    modal.classList.add('show');
+    document.getElementById('createModeName').focus();
+}
+
+function closeCreateModeModal() {
+    const modal = document.getElementById('createModeModal');
+    modal.classList.remove('show');
+}
+
+function openEditModeModal(mode) {
+    const modal = document.getElementById('editModeModal');
+    
+    // Populate form fields with mode data
+    document.getElementById('editModeId').value = mode.id;
+    document.getElementById('editModeName').value = mode.name;
+    document.getElementById('editModeDescription').value = mode.description || '';
+    document.getElementById('editModeAiName').value = mode.aiName;
+    document.getElementById('editModeSystemMessage').value = mode.systemPrompt || '';
+    document.getElementById('editModeIcon').value = mode.icon || 'psychology';
+    document.getElementById('editModeDepartment').value = mode.department || '';
+    document.getElementById('editModeTemperature').value = mode.temperature;
+    document.getElementById('editModeMaxTokens').value = mode.maxTokens;
+    document.getElementById('editModeTopP').value = mode.topP;
+    document.getElementById('editModeTopK').value = mode.topK;
+    document.getElementById('editModeActive').checked = mode.is_active;
+    
+    // Update display values
+    document.getElementById('editModeTempValue').textContent = mode.temperature;
+    document.getElementById('editModeTokenValue').textContent = mode.maxTokens;
+    document.getElementById('editModeTopPValue').textContent = mode.topP;
+    document.getElementById('editModeTopKValue').textContent = mode.topK;
+    
+    modal.classList.add('show');
+    document.getElementById('editModeName').focus();
+}
+
+function closeEditModeModal() {
+    const modal = document.getElementById('editModeModal');
+    modal.classList.remove('show');
+}
+
+async function saveCreateMode() {
+    try {
+        const modeData = {
+            name: document.getElementById('createModeName').value.trim(),
+            description: document.getElementById('createModeDescription').value.trim(),
+            aiName: document.getElementById('createModeAiName').value.trim(),
+            systemPrompt: document.getElementById('createModeSystemMessage').value.trim(),
+            icon: document.getElementById('createModeIcon').value,
+            department: document.getElementById('createModeDepartment').value.trim(),
+            temperature: parseFloat(document.getElementById('createModeTemperature').value),
+            maxTokens: parseInt(document.getElementById('createModeMaxTokens').value),
+            topP: parseFloat(document.getElementById('createModeTopP').value),
+            topK: parseInt(document.getElementById('createModeTopK').value),
+            is_active: document.getElementById('createModeActive').checked
+        };
+        
+        if (!modeData.name) {
+            alert('Mode name is required');
+            return;
+        }
+        
+        await createAiMode(modeData);
+        closeCreateModeModal();
+        updateStatus('connected', 'AI mode created successfully');
+        
+        setTimeout(() => {
+            updateStatus('connected', 'Connected - Ready to chat');
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error creating mode:', error);
+        alert('Error creating mode: ' + error.message);
+    }
+}
+
+async function saveEditMode() {
+    try {
+        const modeId = document.getElementById('editModeId').value;
+        const modeData = {
+            name: document.getElementById('editModeName').value.trim(),
+            description: document.getElementById('editModeDescription').value.trim(),
+            aiName: document.getElementById('editModeAiName').value.trim(),
+            systemPrompt: document.getElementById('editModeSystemMessage').value.trim(),
+            icon: document.getElementById('editModeIcon').value,
+            department: document.getElementById('editModeDepartment').value.trim(),
+            temperature: parseFloat(document.getElementById('editModeTemperature').value),
+            maxTokens: parseInt(document.getElementById('editModeMaxTokens').value),
+            topP: parseFloat(document.getElementById('editModeTopP').value),
+            topK: parseInt(document.getElementById('editModeTopK').value),
+            is_active: document.getElementById('editModeActive').checked
+        };
+        
+        if (!modeData.name) {
+            alert('Mode name is required');
+            return;
+        }
+        
+        await updateAiMode(modeId, modeData);
+        closeEditModeModal();
+        updateStatus('connected', 'AI mode updated successfully');
+        
+        setTimeout(() => {
+            updateStatus('connected', 'Connected - Ready to chat');
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error updating mode:', error);
+        alert('Error updating mode: ' + error.message);
+    }
+}
+
+async function toggleModeActive(modeId) {
+    try {
+        await toggleAiModeActive(modeId);
+        updateStatus('connected', 'AI mode status toggled');
+        
+        setTimeout(() => {
+            updateStatus('connected', 'Connected - Ready to chat');
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error toggling mode:', error);
+        alert('Error toggling mode: ' + error.message);
+    }
+}
+
+async function deleteMode(modeId) {
+    if (!confirm('Are you sure you want to delete this AI mode? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        await deleteAiMode(modeId);
+        updateStatus('connected', 'AI mode deleted successfully');
+        
+        setTimeout(() => {
+            updateStatus('connected', 'Connected - Ready to chat');
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error deleting mode:', error);
+        alert('Error deleting mode: ' + error.message);
+    }
+}
+
+// Toggle between showing all modes and active modes only
+async function toggleModesView() {
+    showAllModes = !showAllModes;
+    
+    // Update the toggle button text
+    const toggleButton = document.getElementById('toggleModesView');
+    if (toggleButton) {
+        toggleButton.textContent = showAllModes ? 'Show Active Only' : 'Show All';
+        toggleButton.title = showAllModes ? 'Show only active AI modes' : 'Show all AI modes (including inactive)';
+    }
+    
+    // Reload modes with the new view
+    await loadModes();
+    
+    // Update status
+    const statusText = showAllModes ? 'Showing all modes' : 'Showing active modes only';
+    updateStatus('connected', statusText);
+    
+    setTimeout(() => {
+        updateStatus('connected', 'Connected - Ready to chat');
+    }, 2000);
+}
+
 // Mode Management
 async function loadModes() {
     try {
-        const response = await fetch('/config.json');
-        const config = await response.json();
-        modes = config.modes;
+        // Choose endpoint based on current view
+        const endpoint = showAllModes ? '/api/ai-modes' : '/api/ai-modes/active';
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load modes');
+        }
+        
+        // Transform API data to match expected format
+        modes = result.data.map(mode => ({
+            id: mode.id,
+            name: mode.name,
+            aiName: mode.ai_name,
+            systemPrompt: mode.system_message,
+            temperature: parseFloat(mode.temperature),
+            maxTokens: mode.max_tokens,
+            topP: parseFloat(mode.top_p),
+            topK: mode.top_k,
+            icon: mode.icon,
+            department: mode.department,
+            is_active: mode.is_active,
+            description: mode.description
+        }));
+        
         filteredModes = [...modes]; // Initialize filtered modes with all modes
         
         // Render the modes list
         renderModesList();
         
-        // Select default mode
-        const defaultMode = modes.find(mode => mode.default);
-        if (defaultMode) {
-            selectMode(defaultMode);
-        } else if (modes.length > 0) {
+        // Select first mode if available
+        if (modes.length > 0) {
             selectMode(modes[0]);
         }
         
@@ -898,6 +1376,139 @@ function selectMode(mode) {
     addMessage('assistant', `Mode switched to "${mode.name}". I'm now ${aiName} and ready to help you!`);
     
     updateStatus('connected', `Mode: ${mode.name} - ${aiName}`);
+}
+
+// AI Mode Management Functions
+async function createAiMode(modeData) {
+    try {
+        const response = await fetch('/api/ai-modes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: modeData.name,
+                description: modeData.description,
+                ai_name: modeData.aiName,
+                system_message: modeData.systemPrompt,
+                temperature: modeData.temperature,
+                max_tokens: modeData.maxTokens,
+                top_p: modeData.topP,
+                top_k: modeData.topK,
+                icon: modeData.icon,
+                department: modeData.department,
+                is_active: modeData.is_active
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to create AI mode');
+        }
+
+        // Reload modes to get the updated list
+        await loadModes();
+        return result.data;
+    } catch (error) {
+        console.error('Error creating AI mode:', error);
+        throw error;
+    }
+}
+
+async function updateAiMode(modeId, modeData) {
+    try {
+        const response = await fetch(`/api/ai-modes/${modeId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: modeData.name,
+                description: modeData.description,
+                ai_name: modeData.aiName,
+                system_message: modeData.systemPrompt,
+                temperature: modeData.temperature,
+                max_tokens: modeData.maxTokens,
+                top_p: modeData.topP,
+                top_k: modeData.topK,
+                icon: modeData.icon,
+                department: modeData.department,
+                is_active: modeData.is_active
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to update AI mode');
+        }
+
+        // Reload modes to get the updated list
+        await loadModes();
+        return result.data;
+    } catch (error) {
+        console.error('Error updating AI mode:', error);
+        throw error;
+    }
+}
+
+async function deleteAiMode(modeId) {
+    try {
+        const response = await fetch(`/api/ai-modes/${modeId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to delete AI mode');
+        }
+
+        // Reload modes to get the updated list
+        await loadModes();
+        return result.data;
+    } catch (error) {
+        console.error('Error deleting AI mode:', error);
+        throw error;
+    }
+}
+
+async function toggleAiModeActive(modeId) {
+    try {
+        const response = await fetch('/api/ai-modes/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: modeId })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to toggle AI mode');
+        }
+
+        // Reload modes to get the updated list
+        await loadModes();
+        return result.data;
+    } catch (error) {
+        console.error('Error toggling AI mode:', error);
+        throw error;
+    }
 }
 
 // File Management
@@ -1121,10 +1732,308 @@ function setupEventListeners() {
     });
 }
 
+// Strategy Management
+async function loadStrategies() {
+    try {
+        // Load sequences from the database API
+        const response = await fetch('/api/recordings');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sequences: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to load sequences');
+        }
+        
+        const allStrategies = [];
+        
+        // Convert database recordings to strategy format
+        result.data.forEach(recording => {
+            allStrategies.push({
+                key: recording.id, // Use the database ID as the key
+                name: recording.name,
+                description: recording.description || 'No description available',
+                department: 'Recorded Sequences', // Group all recorded sequences together
+                departmentKey: 'recorded-sequences',
+                sequence: recording.sequence, // Store the actual sequence data
+                created_at: recording.created_at,
+                updated_at: recording.updated_at
+            });
+        });
+        
+        strategies = allStrategies;
+        filteredStrategies = [...allStrategies];
+        populateStrategyList(allStrategies);
+        
+        console.log(`Loaded ${allStrategies.length} recorded sequences from database`);
+    } catch (error) {
+        console.error('Error loading strategies:', error);
+        updateStatus('disconnected', 'Failed to load sequences: ' + error.message);
+    }
+}
+
+function populateStrategyList(strategies) {
+    const strategyList = document.getElementById('strategyList');
+    if (!strategyList) return;
+    
+    strategyList.innerHTML = '';
+    
+    // Group strategies by department
+    const departments = {};
+    strategies.forEach(strategy => {
+        if (!departments[strategy.department]) {
+            departments[strategy.department] = [];
+        }
+        departments[strategy.department].push(strategy);
+    });
+    
+    // Create strategy items grouped by department
+    Object.keys(departments).sort().forEach(department => {
+        // Add department header
+        const departmentHeader = document.createElement('div');
+        departmentHeader.className = 'strategy-department-header';
+        departmentHeader.innerHTML = `
+            <h4>${department}</h4>
+        `;
+        strategyList.appendChild(departmentHeader);
+        
+        // Add strategies for this department
+        departments[department].forEach(strategy => {
+            const strategyItem = document.createElement('div');
+            strategyItem.className = 'strategy-item';
+            strategyItem.setAttribute('data-strategy-key', strategy.key);
+            strategyItem.setAttribute('data-department-key', strategy.departmentKey);
+            
+            // Format the creation date
+            const createdDate = strategy.created_at ? new Date(strategy.created_at).toLocaleDateString() : 'Unknown';
+            
+            strategyItem.innerHTML = `
+                <div class="strategy-header">
+                    <span class="material-icons strategy-icon">play_arrow</span>
+                    <div class="strategy-info">
+                        <div class="strategy-name">${strategy.name}</div>
+                        <div class="strategy-description">${strategy.description || 'No description available'}</div>
+                        <div class="strategy-meta">Created: ${createdDate}</div>
+                    </div>
+                    <button class="strategy-delete-btn" onclick="deleteSequence('${strategy.key}')" title="Delete sequence">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
+            `;
+            
+            strategyItem.addEventListener('click', async (event) => {
+                // Prevent event bubbling if clicking on delete button
+                if (event.target.closest('.strategy-delete-btn')) {
+                    return;
+                }
+                
+                // Remove active class from all strategy items
+                document.querySelectorAll('.strategy-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                
+                // Add active class to clicked item
+                strategyItem.classList.add('active');
+                
+                // Execute the strategy immediately
+                await executeStrategy(strategy.key, strategy.departmentKey);
+            });
+            
+            strategyList.appendChild(strategyItem);
+        });
+    });
+}
+
+// Strategy Search Functions
+function setupStrategySearch() {
+    const searchInput = document.getElementById('strategySearch');
+    const clearButton = document.getElementById('strategySearchClear');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            
+            if (searchTerm) {
+                clearButton.style.display = 'block';
+                filterStrategies(searchTerm);
+            } else {
+                clearButton.style.display = 'none';
+                clearStrategySearch();
+            }
+        });
+    }
+}
+
+function filterStrategies(searchTerm) {
+    filteredStrategies = strategies.filter(strategy => 
+        strategy.name.toLowerCase().includes(searchTerm) ||
+        strategy.description.toLowerCase().includes(searchTerm) ||
+        strategy.department.toLowerCase().includes(searchTerm)
+    );
+    
+    populateStrategyList(filteredStrategies);
+}
+
+function clearStrategySearch() {
+    const searchInput = document.getElementById('strategySearch');
+    const clearButton = document.getElementById('strategySearchClear');
+    
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    if (clearButton) {
+        clearButton.style.display = 'none';
+    }
+    
+    filteredStrategies = [...strategies];
+    populateStrategyList(filteredStrategies);
+}
+
+function selectStrategy() {
+    const dropdown = document.getElementById('strategyDropdown');
+    const embeddedDropdown = document.getElementById('embeddedStrategyDropdown');
+    
+    // Check both dropdowns
+    const selectedKey = (dropdown && dropdown.value) || (embeddedDropdown && embeddedDropdown.value);
+    
+    if (selectedKey) {
+        console.log('Selected strategy key:', selectedKey);
+        
+        // Find the strategy details to get the department key
+        const selectedOption = (dropdown && dropdown.selectedOptions[0]) || (embeddedDropdown && embeddedDropdown.selectedOptions[0]);
+        if (selectedOption) {
+            const optgroup = selectedOption.parentElement;
+            const departmentName = optgroup.label;
+            
+            // Map department name to department key
+            const departmentKeyMap = {
+                'Analytics': 'analytics',
+                'Branding': 'branding',
+                'Conversational': 'conversational',
+                'Customer Support': 'customer-support',
+                'Design': 'design',
+                'Finance': 'finance',
+                'Human Resources': 'human-resources',
+                'Legal': 'legal',
+                'Marketing': 'marketing',
+                'Product': 'product',
+                'Quality Assurance': 'quality-assurance',
+                'Research': 'research',
+                'Sales': 'sales',
+                'Scrum': 'scrum',
+                'Strategic Planning': 'strategic-planning'
+            };
+            
+            const departmentKey = departmentKeyMap[departmentName];
+            
+            if (departmentKey) {
+                // Execute the selected strategy
+                executeStrategy(selectedKey, departmentKey);
+            } else {
+                console.error('Unknown department:', departmentName);
+                updateStatus('disconnected', 'Unknown department: ' + departmentName);
+            }
+        }
+        
+        // Reset dropdowns to default
+        if (dropdown) dropdown.value = '';
+        if (embeddedDropdown) embeddedDropdown.value = '';
+        // Close the actions dropdown
+        closeActionsDropdown();
+    }
+}
+
+async function executeStrategy(strategyKey, departmentKey) {
+    try {
+        console.log(`Executing sequence: ${strategyKey}`);
+        
+        // Find the strategy/sequence data
+        const strategy = strategies.find(s => s.key === strategyKey);
+        if (!strategy) {
+            throw new Error('Sequence not found');
+        }
+        
+        // Execute the sequence directly using the plan executor
+        const response = await fetch('/api/plan/execute-sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sequence: strategy.sequence,
+                speed: 1.0
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('Sequence execution started successfully');
+        } else {
+            console.error('Failed to execute sequence:', result.error);
+        }
+    } catch (error) {
+        console.error('Error executing sequence:', error);
+    }
+}
+
+// Executing indicator function removed - no longer needed
+
+// Execution status tracking removed
+
+// Polling function removed - no longer needed
+
+// Execution status functions removed - no longer needed
+
+function toggleActionsDropdown() {
+    const dropdown = document.getElementById('actionsDropdown');
+    if (!dropdown) return;
+    
+    if (dropdown.classList.contains('show')) {
+        closeActionsDropdown();
+    } else {
+        openActionsDropdown();
+    }
+}
+
+function openActionsDropdown() {
+    const dropdown = document.getElementById('actionsDropdown');
+    if (!dropdown) return;
+    
+    // Close any other open dropdowns first
+    closeActionsDropdown();
+    
+    dropdown.classList.add('show');
+    
+    // Add click outside listener
+    setTimeout(() => {
+        document.addEventListener('click', closeActionsDropdownOnClickOutside);
+    }, 0);
+}
+
+function closeActionsDropdown() {
+    const dropdown = document.getElementById('actionsDropdown');
+    if (!dropdown) return;
+    
+    dropdown.classList.remove('show');
+    document.removeEventListener('click', closeActionsDropdownOnClickOutside);
+}
+
+function closeActionsDropdownOnClickOutside(event) {
+    const dropdown = document.getElementById('actionsDropdown');
+    const button = document.querySelector('.actions-dropdown-button');
+    
+    if (dropdown && !dropdown.contains(event.target) && !button?.contains(event.target)) {
+        closeActionsDropdown();
+    }
+}
+
 // Initialize application
 function initializeApp() {
     setupEventListeners();
     loadModes();
+    loadStrategies();
+    setupStrategySearch();
     
     // Set initial timestamp
     const initialTimestamp = document.getElementById('initialTimestamp');

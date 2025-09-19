@@ -12,6 +12,7 @@ import QualityAssuranceDepartment from './quality-assurance';
 import ScrumDepartment from './scrum';
 import ResearchDepartment from './research';
 import LegalDepartment from './legal';
+import ConversationalDepartment from './conversational';
 
 const departments = [
     {
@@ -97,6 +98,12 @@ const departments = [
         description: 'Legal department',
         department: new LegalDepartment(),
         id: 'legal',
+    },
+    {
+        name: 'Conversational',
+        description: 'Conversational department',
+        department: new ConversationalDepartment(),
+        id: 'conversational',
     }
 ];
 
