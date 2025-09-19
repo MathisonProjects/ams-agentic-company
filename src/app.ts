@@ -30,8 +30,10 @@ export class App {
   private async initialize(): Promise<void> {
     await this.setupPostgres();
     this.setupAppApi();
+    this.setupRobotJs();  // Initialize RobotJS before Gemini
+    // wait 100ms before continuing to give robotjs time to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
     this.setupGemini();
-    this.setupRobotJs();
     this.setupTracker();
     this.setupPlanExecutor();
     this.setupHttpServer();
@@ -80,9 +82,13 @@ export class App {
       console.log(`📥 Response: "${response.text}"`);
       console.log('='.repeat(80) + '\n');
 
-      // Open the web interface
+      // Open the web interface after ensuring RobotJS is initialized
       setTimeout(() => {
-        this.robotJs.openBrowser(`http://${config.host}:${config.port}`);
+        if (this.robotJs) {
+          this.robotJs.openBrowser(`http://${config.host}:${config.port}`);
+        } else {
+          this.logger.warn('RobotJS not initialized, cannot open browser');
+        }
       }, 1000);
 
     } catch (error) {
@@ -91,6 +97,7 @@ export class App {
   }
 
   private setupRobotJs(): void {
+    console.log('Setting up RobotJS');
     this.robotJs = new RobotJsPlugin();
     this.logger.info('RobotJS plugin initialized');
   }

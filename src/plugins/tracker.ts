@@ -165,8 +165,13 @@ export class TrackerPlugin {
      * Start monitoring mouse clicks and drags
      */
     private startMouseTracking(): void {
+        if (!robotjs) {
+            this.logger.warn('Mouse tracking not available - RobotJS not loaded');
+            return;
+        }
+
         this.mouseClickInterval = setInterval(() => {
-            if (!this.isTracking) return;
+            if (!this.isTracking || !robotjs) return;
 
             const currentPosition = robotjs.getMousePos();
             
@@ -547,7 +552,7 @@ export class TrackerPlugin {
     manualRecordLeftClick(x?: number, y?: number): void {
         if (!this.isTracking) return;
 
-        const position = x !== undefined && y !== undefined ? { x, y } : robotjs.getMousePos();
+        const position = x !== undefined && y !== undefined ? { x, y } : (robotjs ? robotjs.getMousePos() : { x: 0, y: 0 });
         this.recordLeftClick(position.x, position.y);
         this.logger.info('Manually recorded left click', { x: position.x, y: position.y });
     }
@@ -558,7 +563,7 @@ export class TrackerPlugin {
     manualRecordRightClick(x?: number, y?: number): void {
         if (!this.isTracking) return;
 
-        const position = x !== undefined && y !== undefined ? { x, y } : robotjs.getMousePos();
+        const position = x !== undefined && y !== undefined ? { x, y } : (robotjs ? robotjs.getMousePos() : { x: 0, y: 0 });
         this.recordRightClick(position.x, position.y);
         this.logger.info('Manually recorded right click', { x: position.x, y: position.y });
     }
@@ -579,7 +584,7 @@ export class TrackerPlugin {
     manualRecordScroll(direction: 'up' | 'down' | 'left' | 'right', amount: number = 1): void {
         if (!this.isTracking) return;
 
-        const position = robotjs.getMousePos();
+        const position = robotjs ? robotjs.getMousePos() : { x: 0, y: 0 };
         this.recordScrollEvent(direction, amount, position.x, position.y);
         this.logger.info('Manually recorded scroll event', { direction, amount, x: position.x, y: position.y });
     }
@@ -590,7 +595,7 @@ export class TrackerPlugin {
     manualRecordDoubleClick(x?: number, y?: number): void {
         if (!this.isTracking) return;
 
-        const position = x !== undefined && y !== undefined ? { x, y } : robotjs.getMousePos();
+        const position = x !== undefined && y !== undefined ? { x, y } : (robotjs ? robotjs.getMousePos() : { x: 0, y: 0 });
         this.recordDoubleClick(position.x, position.y);
         this.logger.info('Manually recorded double click', { x: position.x, y: position.y });
     }
@@ -603,15 +608,16 @@ export class TrackerPlugin {
             return null;
         }
 
-        // Sort events by timestamp to ensure proper order
-        const sortedEvents = [...this.sequence].sort((a, b) => a.timestamp - b.timestamp);
-        
-        if (sortedEvents.length === 0) {
+        // RACE CONDITION FIX: Don't sort by timestamp - preserve recording order
+        // The sequence array already represents the chronological order of user actions
+        const eventsInRecordOrder = [...this.sequence];
+
+        if (eventsInRecordOrder.length === 0) {
             return null;
         }
-        
+
         // Remove duplicate key events
-        const deduplicatedEvents = this.removeDuplicateKeyEvents(sortedEvents);
+        const deduplicatedEvents = this.removeDuplicateKeyEvents(eventsInRecordOrder);
         
         // Calculate relative timing from the first event
         const startTime = deduplicatedEvents[0]?.timestamp || 0;
@@ -752,6 +758,11 @@ export class TrackerPlugin {
      * Replay a single event
      */
     private async replayEvent(event: TrackedEvent): Promise<void> {
+        if (!robotjs) {
+            this.logger.warn(`Mock replay: ${event.type} event`);
+            return;
+        }
+
         switch (event.type) {
             case 'leftClick':
                 const clickData = event.data as ClickEvent;

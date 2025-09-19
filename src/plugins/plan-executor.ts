@@ -59,6 +59,7 @@ class PlanExecutor {
      * Execute a plan from a department config
      */
     async executePlan(plan: Plan, speed: number = 1.0): Promise<boolean> {
+        // RACE CONDITION: No synchronization if multiple executePlan calls occur simultaneously
         if (this.isExecuting) {
             this.logger.warn('Plan execution already in progress');
             return false;
@@ -67,7 +68,7 @@ class PlanExecutor {
         this.isExecuting = true;
         this.currentPlan = plan;
         this.executionSpeed = speed;
-        
+
         // Reset modifier key states
         this.activeModifiers.clear();
 
@@ -124,29 +125,30 @@ class PlanExecutor {
             return;
         }
 
+        // Events should already be in chronological order from tracker
         const startTime = Date.now();
-        
+
         this.logger.info(`Executing ${events.length} events with preserved timing`);
 
         for (let i = 0; i < events.length; i++) {
             const event = events[i];
             if (!event) continue;
-            
+
             const nextEvent = events[i + 1];
-            
+
             // Execute the current event
             await this.executeEvent(event);
-            
+
             // Calculate delay to next event based on relative timing
             if (nextEvent && event.relativeTime !== undefined && nextEvent.relativeTime !== undefined) {
                 const timeToNextEvent = (nextEvent.relativeTime - event.relativeTime) / speed;
-                
+
                 if (timeToNextEvent > 0) {
                     this.logger.debug(`Waiting ${timeToNextEvent}ms before next event`);
                     await this.delay(timeToNextEvent);
                 }
             } else if (i < events.length - 1) {
-                // Fallback: small delay between events if no timing info
+                // RACE CONDITION: Fixed 100ms delay may not account for varying event completion times
                 await this.delay(100 / speed);
             }
         }
@@ -296,17 +298,17 @@ class PlanExecutor {
             
             // Press and hold mouse button
             robotjs.mouseToggle('down', 'left');
-            
+
             // Small delay to ensure button press is registered
             await this.delay(50 / this.executionSpeed);
-            
+
             // Move to end position while holding with more gradual movement
             await this.moveMouseHumanLike(event.data.endX, event.data.endY);
-            
+
             // Small delay before releasing
             await this.delay(100 / this.executionSpeed);
-            
-            // Release mouse button
+
+            // RACE CONDITION: No verification that drag completed before releasing button
             robotjs.mouseToggle('up', 'left');
             
             // Additional delay after drag completion
@@ -322,19 +324,19 @@ class PlanExecutor {
             this.logger.info(`Mock: Key press ${event.data.key} with modifiers: ${event.data.modifiers?.join(', ') || 'none'}`);
             return;
         }
-        
+
         if (event.data.key) {
             const key = this.normalizeKey(event.data.key);
             const modifiers = event.data.modifiers || [];
-            
+
             this.logger.debug(`Key press: ${key} with modifiers: ${modifiers.join(', ')}`);
-            
+
             try {
                 // Handle modifier key states
                 if (modifiers.includes('DOWN')) {
                     // Key press
                     if (this.isModifierKey(key)) {
-                        // Track modifier key press
+                        // RACE CONDITION: activeModifiers Set not thread-safe for concurrent access
                         this.activeModifiers.add(key);
                         this.logger.debug(`Modifier key pressed: ${key} (active: ${Array.from(this.activeModifiers).join(', ')})`);
                     } else {
@@ -351,7 +353,7 @@ class PlanExecutor {
                 } else if (modifiers.includes('UP')) {
                     // Key release
                     if (this.isModifierKey(key)) {
-                        // Remove modifier key from active set
+                        // RACE CONDITION: activeModifiers Set not thread-safe for concurrent access
                         this.activeModifiers.delete(key);
                         this.logger.debug(`Modifier key released: ${key} (active: ${Array.from(this.activeModifiers).join(', ')})`);
                     } else {
@@ -485,6 +487,7 @@ class PlanExecutor {
     stopExecution(): void {
         if (this.isExecuting) {
             this.logger.info('Stopping plan execution');
+            // RACE CONDITION: No cleanup of partially executed events or active modifier states
             this.isExecuting = false;
             this.currentPlan = null;
         }

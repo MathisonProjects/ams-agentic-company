@@ -97,3 +97,7 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Misc
+.claude/
+claude-swarm.yml

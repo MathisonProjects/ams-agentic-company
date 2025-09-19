@@ -57,8 +57,15 @@ export class RobotJsPlugin {
                 this.logger.info('Mock: Browser would open URL:', url);
                 return;
             }
+
+            // Windows-specific browser launch command
+            // Uses PowerShell to start Chrome with a new window
+            console.log('Opening browser with command:', `powershell Start-Process chrome.exe '--new-window ${url}'`);
+            const command = `powershell Start-Process chrome.exe '--new-window ${url}'`;
+
+            // macOS command (commented out - needs OS detection)
+            // const command = `start "${url}"`;
             
-            const command = `open "${url}"`;
             const { exec } = require('child_process');
             
             exec(command, (error: any) => {
@@ -83,22 +90,27 @@ export class RobotJsPlugin {
                 this.logger.info('Mock: Mouse moved to', { x, y });
                 return;
             }
-            
+
+            // RACE CONDITION: No delay between steps can cause events to queue/overlap
             // Get current mouse position
             const pos = robotjs.getMousePos();
-            
+            // timeout to prevent race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Calculate distance to move
             const dx = x - pos.x;
             const dy = y - pos.y;
-            
+
             // Move mouse gradually in small steps for more human-like movement
             const steps = 20;
             for (let i = 0; i < steps; i++) {
                 const stepX = Math.round(pos.x + (dx * (i + 1) / steps));
                 const stepY = Math.round(pos.y + (dy * (i + 1) / steps));
                 robotjs.moveMouse(stepX, stepY);
+                // RACE CONDITION: Missing await/delay allows rapid fire events
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
-            
+
             this.logger.info('Mouse moved to', { x, y });
         } catch (error) {
             this.logger.error('Error moving mouse', error);
@@ -115,11 +127,13 @@ export class RobotJsPlugin {
                 this.logger.info('Mock: Left click performed', x !== undefined ? { x, y } : 'at current position');
                 return;
             }
-            
+
             if (x !== undefined && y !== undefined) {
                 await this.mouseMove(x, y);
+                // RACE CONDITION: No delay between move and click can cause premature clicking
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
-            
+
             robotjs.mouseClick();
             this.logger.info('Left click performed', x !== undefined ? { x, y } : 'at current position');
         } catch (error) {
@@ -135,6 +149,8 @@ export class RobotJsPlugin {
         try {
             if (x !== undefined && y !== undefined) {
                 await this.mouseMove(x, y);
+                // RACE CONDITION: No delay between move and click can cause premature clicking
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
             
             robotjs.mouseClick('right');
@@ -152,6 +168,8 @@ export class RobotJsPlugin {
         try {
             if (x !== undefined && y !== undefined) {
                 await this.mouseMove(x, y);
+                // RACE CONDITION: No delay between move and click can cause premature clicking
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
             
             robotjs.mouseClick('left', true);
@@ -190,7 +208,7 @@ export class RobotJsPlugin {
                 } else {
                     robotjs.typeString(char);
                     await new Promise(resolve => setTimeout(resolve, (baseDelay + Math.random() * 50)));
-                    
+
                     if (char === '.' || char === '!' || char === '?') {
                         await new Promise(resolve => setTimeout(resolve, (200 + Math.random() * 50)));
                     }
@@ -199,11 +217,14 @@ export class RobotJsPlugin {
                     }
                     if (Math.random() < 0.05) { // 5% chance of a mistake
                         robotjs.keyTap('backspace');
+                        // RACE CONDITION: No delay between backspace and re-type can cause key collision
                         robotjs.typeString(char);
+                        // RACE CONDITION: No delay between backspace and re-type can cause key collision
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
                 }
             }
-            
+
             this.logger.info('Human-like text typed:', text.substring(0, 50) + (text.length > 50 ? '...' : ''));
         } catch (error) {
             this.logger.error('Error in human typing', error);
@@ -222,6 +243,7 @@ export class RobotJsPlugin {
                 robotjs.keyTap(key);
             }
             
+            // RACE CONDITION: No delay between key press and next action can cause key collision
             await new Promise(resolve => setTimeout(resolve, 1000));
             this.logger.info('Key pressed:', modifier ? `${modifier}+${key}` : key);
         } catch (error) {
@@ -259,9 +281,11 @@ export class RobotJsPlugin {
     /**
      * Get current mouse position
      */
-    getMousePosition(): { x: number; y: number } {
+    async getMousePosition(): Promise<{ x: number; y: number }> {
         try {
             const pos = robotjs.getMousePos();
+            // RACE CONDITION: No delay between get mouse position and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             return { x: pos.x, y: pos.y };
         } catch (error) {
             this.logger.error('Error getting mouse position', error);
@@ -272,9 +296,11 @@ export class RobotJsPlugin {
     /**
      * Get screen size
      */
-    getScreenSize(): { width: number; height: number } {
+    async getScreenSize(): Promise<{ width: number; height: number }> {
         try {
             const size = robotjs.getScreenSize();
+            // RACE CONDITION: No delay between get screen size and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             return { width: size.width, height: size.height };
         } catch (error) {
             this.logger.error('Error getting screen size', error);
@@ -287,11 +313,12 @@ export class RobotJsPlugin {
      */
     async clickPercentile(x: number, y: number): Promise<void> {
         try {
-            const { width, height } = this.getScreenSize();
+            const { width, height } = await this.getScreenSize();
             const targetX = Math.floor(width * (x / 100));
             const targetY = Math.floor(height * (y / 100));
             
             await this.mouseMove(targetX, targetY);
+            // RACE CONDITION: No delay between move and click can cause premature clicking
             await new Promise(resolve => setTimeout(resolve, 250));
             robotjs.mouseClick();
             
@@ -314,7 +341,8 @@ export class RobotJsPlugin {
             
             // Take screenshot using robotjs
             const screenshot = robotjs.screen.capture();
-            
+            // RACE CONDITION: No delay between take screenshot and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             // Save the screenshot
             const imageBuffer = screenshot.image;
             fs.writeFileSync(screenshotPath, imageBuffer);
@@ -344,7 +372,8 @@ export class RobotJsPlugin {
             
             // Take screenshot of specific region using robotjs
             const screenshot = robotjs.screen.capture(x, y, width, height);
-            
+            // RACE CONDITION: No delay between take screenshot and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             // Save the screenshot
             const imageBuffer = screenshot.image;
             fs.writeFileSync(screenshotPath, imageBuffer);
@@ -370,7 +399,8 @@ export class RobotJsPlugin {
         try {
             // Take screenshot using robotjs
             const screenshot = robotjs.screen.capture();
-            
+            // RACE CONDITION: No delay between take screenshot and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             // Convert to base64
             const imageBuffer = screenshot.image;
             const base64String = imageBuffer.toString('base64');
@@ -394,7 +424,8 @@ export class RobotJsPlugin {
         try {
             // Take screenshot of specific region using robotjs
             const screenshot = robotjs.screen.capture(x, y, width, height);
-            
+            // RACE CONDITION: No delay between take screenshot and next action can cause race condition
+            await new Promise(resolve => setTimeout(resolve, 100));
             // Convert to base64
             const imageBuffer = screenshot.image;
             const base64String = imageBuffer.toString('base64');

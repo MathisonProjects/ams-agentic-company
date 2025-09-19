@@ -4,9 +4,9 @@
   "description": "A TypeScript-based application with WebSocket support",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "dev": "nodemon",
-    "start": "node dist/index.js",
+    "build": "cross-env tsc",
+    "dev": "cross-env nodemon",
+    "start": "cross-env node dist/index.js",
     "watch": "tsc --watch",
     "clean": "rm -rf dist",
     "test": "jest",
@@ -25,9 +25,9 @@
     "docker:app-logs": "docker compose logs -f app",
     "docker:app-restart": "docker compose restart app",
     "docker:app-rebuild": "docker compose build app && docker compose up -d app",
-    "local:dev": "NODE_ENV=development nodemon",
-    "local:start": "NODE_ENV=development node dist/index.js",
-    "local:build": "npm run build && npm run local:start"
+    "local:dev": "cross-env NODE_ENV=development nodemon",
+    "local:start": "cross-env NODE_ENV=development node dist/index.js",
+    "local:build": "cross-env npm run build && npm run local:start"
   },
   "keywords": [
     "typescript",
@@ -55,6 +55,7 @@
     "@google/generative-ai": "^0.24.1",
     "@types/multer": "^2.0.0",
     "cron": "^3.1.6",
+    "cross-env": "^10.0.0",
     "dotenv": "^16.3.0",
     "kafkajs": "^2.2.4",
     "multer": "^2.0.2",
