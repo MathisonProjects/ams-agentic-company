@@ -303,7 +303,7 @@ class PlanExecutor {
             await this.delay(50 / this.executionSpeed);
 
             // Move to end position while holding with more gradual movement
-            await this.moveMouseHumanLike(event.data.endX, event.data.endY);
+            await this.moveMouseHumanLike(event.data.startX, event.data.startY);
 
             // Small delay before releasing
             await this.delay(100 / this.executionSpeed);

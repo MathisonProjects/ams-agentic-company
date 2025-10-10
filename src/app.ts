@@ -925,7 +925,7 @@ export class App {
 
     try {
       const body = await this.getRequestBody(req);
-      const { planKey, departmentKey, speed = 1.0 } = JSON.parse(body);
+      const { planKey, departmentKey, speed = 1.25 } = JSON.parse(body);
 
       if (!planKey || !departmentKey) {
         res.writeHead(400, { 'Content-Type': 'application/json' });

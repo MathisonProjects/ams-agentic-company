@@ -250,7 +250,11 @@ export class TrackerPlugin {
                                 Math.pow(currentPosition.y - this.dragStartPosition.y, 2)
                             );
                             
-                            if (distance > 5) { // Lower threshold for screenshot mode
+                            // Require both distance AND minimum time for intentional drag
+                            const timeSinceDown = Date.now() - this.lastClickTime;
+                            const isIntentionalDrag = distance > 15 && timeSinceDown > 100;
+
+                            if (isIntentionalDrag) { // Prevent accidental micro-movement drags
                                 // This was a drag - record final drag event
                                 this.recordDragEvent();
                                 

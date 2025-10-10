@@ -6,11 +6,15 @@ import path from 'path';
 let robotjs: any = null;
 try {
     if (process.env['NODE_ENV'] !== 'docker') {
+        console.log('RobotJS initializing...');
         robotjs = require('robotjs');
     }
 } catch (error) {
+    console.error(error, 'RobotJS initialization error');
     // robotjs not available, will use mock functions
 }
+
+console.log(process.env['NODE_ENV'], 'NODE_ENV');
 
 export interface MouseLocationEvent {
     x: number;
