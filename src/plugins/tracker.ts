@@ -222,15 +222,17 @@ export class TrackerPlugin {
             
             this.keyboardListener = new GlobalKeyboardListener();
             
+            // need to deprecate down - it looks to always be true
+            // when logged, down always returns {'MOUSE LEFT': true}
             this.keyboardListener.addListener((e: any, down: any) => {
                 if (!this.isTracking) return;
                 
                 const currentPosition = robotjs ? robotjs.getMousePos() : { x: 0, y: 0 };
                 const keyName = e.name || '';
-                
+                const keyState = e.state || '';
                 // Handle mouse clicks
                 if (keyName === 'MOUSE LEFT') {
-                    if (down && e.state === 'DOWN') {
+                    if (keyState === "DOWN") {
                         // Left mouse button pressed - potential drag start
                         this.lastClickTime = Date.now();
                         this.lastClickPosition = currentPosition;
@@ -242,7 +244,7 @@ export class TrackerPlugin {
                         } else {
                             this.logger.debug('Mouse button pressed - potential drag start', { x: currentPosition.x, y: currentPosition.y });
                         }
-                    } else if (!down && e.state === 'UP') {
+                    } else if (keyState === 'UP') {
                         // Left mouse button released - check if it was a drag or click
                         if (this.dragStartPosition) {
                             const distance = Math.sqrt(
