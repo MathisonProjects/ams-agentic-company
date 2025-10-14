@@ -879,6 +879,7 @@ async function saveSequence() {
     try {
         const name = document.getElementById('sequenceName').value.trim();
         const description = document.getElementById('sequenceDescription').value.trim();
+        const repetitions = document.getElementById('sequenceRepetitions').value.trim();
         
         if (!name) {
             alert('Sequence name is required');
@@ -887,7 +888,8 @@ async function saveSequence() {
         
         // Get the current sequence data
         const response = await fetch('/api/tracker/sequence');
-        const result = await response.json();
+        let result = await response.json();
+        result.data.repetitions = repetitions;
         
         if (!result.success) {
             console.error('Failed to get recorded sequence:', result.error);
@@ -904,7 +906,8 @@ async function saveSequence() {
             body: JSON.stringify({
                 name: name,
                 description: description,
-                sequence: result.data.plan
+                sequence: result.data.plan,
+                repetitions: result.data.repetitions ?? 1
             })
         });
         
@@ -1762,7 +1765,8 @@ async function loadStrategies() {
                 departmentKey: 'recorded-sequences',
                 sequence: recording.sequence, // Store the actual sequence data
                 created_at: recording.created_at,
-                updated_at: recording.updated_at
+                updated_at: recording.updated_at,
+                repetitions: recording.repetitions
             });
         });
         
@@ -1964,7 +1968,8 @@ async function executeStrategy(strategyKey, departmentKey) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 sequence: strategy.sequence,
-                speed: 1.0
+                speed: 1.0,
+                repetitions: strategy.repetitions ?? 1
             })
         });
         

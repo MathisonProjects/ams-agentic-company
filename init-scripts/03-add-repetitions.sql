@@ -1,0 +1,1 @@
+ALTER TABLE agent_recordings ADD COLUMN IF NOT EXISTS repetitions INTEGER DEFAULT 1;

@@ -33,6 +33,7 @@ interface Plan {
     startTime?: number;
     totalDuration?: number;
     plan: PlanEvent[][];
+    repetitions?: number;
 }
 
 class PlanExecutor {
@@ -41,6 +42,7 @@ class PlanExecutor {
     private currentPlan: Plan | null = null;
     private executionSpeed: number = 1.0; // 1.0 = real time, 2.0 = 2x speed, etc.
     private activeModifiers: Set<string> = new Set(); // Track active modifier keys
+    private repetitions: number = 0; // Track repetitions
 
     constructor() {
         this.logger = new Logger('PlanExecutor');
@@ -58,7 +60,7 @@ class PlanExecutor {
     /**
      * Execute a plan from a department config
      */
-    async executePlan(plan: Plan, speed: number = 1.0): Promise<boolean> {
+    async executePlan(plan: Plan, speed: number = 1.0, repetitions: number = 0): Promise<boolean> {
         // RACE CONDITION: No synchronization if multiple executePlan calls occur simultaneously
         if (this.isExecuting) {
             this.logger.warn('Plan execution already in progress');
@@ -68,6 +70,7 @@ class PlanExecutor {
         this.isExecuting = true;
         this.currentPlan = plan;
         this.executionSpeed = speed;
+        this.repetitions = repetitions;
 
         // Reset modifier key states
         this.activeModifiers.clear();
@@ -80,7 +83,7 @@ class PlanExecutor {
             
             if (hasTimingInfo) {
                 this.logger.info(`Executing recorded sequence with timing (duration: ${plan.totalDuration}ms, speed: ${speed}x)`);
-                await this.executeRecordedSequence(plan, speed);
+                await this.executeRecordedSequence(plan, speed, repetitions);
             } else {
                 this.logger.info('Executing plan with fixed timing');
                 // Execute each step in the plan (legacy format)
@@ -113,7 +116,7 @@ class PlanExecutor {
     /**
      * Execute a recorded sequence with preserved timing
      */
-    private async executeRecordedSequence(plan: Plan, speed: number): Promise<void> {
+    private async executeRecordedSequence(plan: Plan, speed: number, repetitions: number): Promise<void> {
         if (plan.plan.length === 0 || !plan.plan[0] || plan.plan[0].length === 0) {
             this.logger.warn('No events to execute in recorded sequence');
             return;
@@ -125,36 +128,44 @@ class PlanExecutor {
             return;
         }
 
+        this.repetitions = repetitions;
+
         // Events should already be in chronological order from tracker
         const startTime = Date.now();
 
         this.logger.info(`Executing ${events.length} events with preserved timing`);
 
-        for (let i = 0; i < events.length; i++) {
-            const event = events[i];
-            if (!event) continue;
+        this.logger.info(`Executing ${repetitions} repetitions`);
 
-            const nextEvent = events[i + 1];
-
-            // Execute the current event
-            await this.executeEvent(event);
-
-            // Calculate delay to next event based on relative timing
-            if (nextEvent && event.relativeTime !== undefined && nextEvent.relativeTime !== undefined) {
-                const timeToNextEvent = (nextEvent.relativeTime - event.relativeTime) / speed;
-
-                if (timeToNextEvent > 0) {
-                    this.logger.debug(`Waiting ${timeToNextEvent}ms before next event`);
-                    await this.delay(timeToNextEvent);
+        // go through each repetition, default of 0 so that it only runs once
+        for (let i = 0; i < repetitions; i++) {
+            // -1 to prevent accidental start of new sequence recording
+            for (let i = 0; i < events.length - 1; i++) {
+                const event = events[i];
+                if (!event) continue;
+    
+                const nextEvent = events[i + 1];
+                // Execute the current event
+                await this.executeEvent(event);
+    
+                // Calculate delay to next event based on relative timing
+                if (nextEvent && event.relativeTime !== undefined && nextEvent.relativeTime !== undefined) {
+                    const timeToNextEvent = (nextEvent.relativeTime - event.relativeTime) / speed;
+    
+                    if (timeToNextEvent > 0) {
+                        this.logger.debug(`Waiting ${timeToNextEvent}ms before next event`);
+                        await this.delay(timeToNextEvent);
+                    }
+                } else if (i < events.length - 1) {
+                    // RACE CONDITION: Fixed 100ms delay may not account for varying event completion times
+                    await this.delay(100 / speed);
                 }
-            } else if (i < events.length - 1) {
-                // RACE CONDITION: Fixed 100ms delay may not account for varying event completion times
-                await this.delay(100 / speed);
             }
+            
+            const executionTime = Date.now() - startTime;
+            this.logger.info(`Recorded sequence execution completed in ${executionTime}ms`);
         }
-        
-        const executionTime = Date.now() - startTime;
-        this.logger.info(`Recorded sequence execution completed in ${executionTime}ms`);
+
     }
 
     /**
@@ -473,11 +484,12 @@ class PlanExecutor {
     /**
      * Get execution status
      */
-    getExecutionStatus(): { isExecuting: boolean; currentPlan: string | null; speed: number } {
+    getExecutionStatus(): { isExecuting: boolean; currentPlan: string | null; speed: number; repetitions: number } {
         return {
             isExecuting: this.isExecuting,
             currentPlan: this.currentPlan?.key || null,
-            speed: this.executionSpeed
+            speed: this.executionSpeed,
+            repetitions: this.repetitions
         };
     }
 

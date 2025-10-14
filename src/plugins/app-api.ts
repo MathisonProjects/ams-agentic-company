@@ -8,6 +8,7 @@ export interface AgentRecording {
     description?: string;
     sequence: any; // JSONB data
     next_sequence_id?: number;
+    repetitions?: number;
     created_at?: Date;
     updated_at?: Date;
     deleted_at?: Date | null;
@@ -69,10 +70,11 @@ class AppApiPlugin {
      * Create a new agent recording
      */
     async createAgentRecording(recording: AgentRecording): Promise<QueryResult<AgentRecording>> {
+        this.logger.info("Creating agent recording", { recording });
         try {
             const query = `
-                INSERT INTO agent_recordings (name, description, sequence, next_sequence_id)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO agent_recordings (name, description, sequence, next_sequence_id, repetitions)
+                VALUES ($1, $2, $3, $4, $5)
                 RETURNING *
             `;
             
@@ -80,8 +82,10 @@ class AppApiPlugin {
                 recording.name,
                 recording.description || null,
                 JSON.stringify(recording.sequence),
-                recording.next_sequence_id || 1
+                recording.next_sequence_id || 1,
+                recording.repetitions || 1
             ]);
+            this.logger.info("Result on line 86:", result)
 
             if (result.rows.length > 0 && result.rows[0]) {
                 this.logger.info('Agent recording created successfully', { id: result.rows[0].id });
@@ -164,6 +168,10 @@ class AppApiPlugin {
             if (updates.next_sequence_id !== undefined) {
                 setClauses.push(`next_sequence_id = $${paramIndex++}`);
                 values.push(updates.next_sequence_id);
+            }
+            if (updates.repetitions !== undefined) {
+                setClauses.push(`repetitions = $${paramIndex++}`);
+                values.push(updates.repetitions);
             }
 
             if (setClauses.length === 0) {

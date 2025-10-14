@@ -1012,7 +1012,6 @@ export class App {
         res.end(JSON.stringify({ error: 'No recorded sequence available' }));
         return;
       }
-
       const success = await this.planExecutor.executePlan(plan, speed);
       
       if (success) {
@@ -1038,7 +1037,10 @@ export class App {
 
     try {
       const body = await this.getRequestBody(req);
-      const { sequence, speed = 1.0 } = JSON.parse(body);
+      // default repetitions to 1 so we get at least one run
+      const { sequence, speed = 1.0, repetitions = 1 } = JSON.parse(body);
+      console.log("Repetitions on line 1042:", repetitions)
+      console.log("BODY on line 1043:", body)
 
       if (!sequence) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -1046,8 +1048,9 @@ export class App {
         return;
       }
 
+      console.log("Sequence on line 1050:", sequence)
       // Execute the sequence using the plan executor
-      const success = await this.planExecutor.executePlan(sequence, speed);
+      const success = await this.planExecutor.executePlan(sequence, speed, repetitions);
       
       if (success) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
